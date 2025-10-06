@@ -1,0 +1,27 @@
+{
+    "id": "AA508072",
+    "path": "~/Documents/Projects/D003/Patent_Paper/paper_materials/02_Data_Analysis/Code/MAGEA3_analysis/Bayesian_workflow.R",
+    "project_path": "Bayesian_workflow.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1759742856529.0,
+    "source_on_save": false,
+    "relative_order": 7,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "16,0",
+        "scrollLine": "5"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1759750585,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1759750585177,
+    "read_only": false,
+    "read_only_alternatives": []
+}

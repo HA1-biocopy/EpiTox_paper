@@ -1,0 +1,902 @@
+---
+date: "`r Sys.Date()`"
+params:
+  scripts: "/Users/hoor.alhasani/Documents/Projects/D003/D003_bioinformatics/WPs/WP0/src/R_scripts/"
+  rprt_title: "_In silico prediction_"
+  target: "MAGEA4"
+  hlAllele: "HLA-A*02:01"
+  target_length: 10
+  preds: "/Volumes/slurmUsers/hoor.alhasani/data/test_workflow/V2.5/MAGEA4/PrediTopes/affinity_prediction/"
+  hlAtlas: "/Users/hoor.alhasani/Documents/Projects/D003/DB/HLA_ligand_Atlas/hla_2020.12/"
+  hlAnno: "/Volumes/slurmUsers/hoor.alhasani/data/test_workflow/V2.5/MAGEA4/PrediTopes/DB_annotation/"
+  outdir: "/Users/hoor.alhasani/Documents/Projects/D003/Data/WT1/Reports/PrediTopes"
+output: 
+  html_document:
+    theme: sandstone
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    number_sections: false
+
+title: "<img src=\"./EpiTox.png\" style=\"float: right;width: 300px\"/>`r params$rprt_title` report for target `r params$target`" 
+---
+***
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(kableExtra)
+library(rmarkdown)
+library(ggplot2)
+library(ggvenn)
+library(plotly)
+library(lessR)
+library(dplyr)
+library(tidyr)
+library(DT)
+
+biocopy_colors = c("#A2C510", "#FBB800", "#99CFE9", "#939597", "#C61E19", "#438D99", "#958BB2", "#6B7B88",
+                   "#338232", "#F08000", "#3373A1", "#64686A", "#D14B47", "#98D0BC", "#4F3D7F", "#2C4255")
+
+biocopy_colors_light = c("#E3EEB7", "#C7E5F3", "#FEF1CC", "#E0E1E1", "#FCE6CC", 
+                         "#99B9D0", "#C7DDE0", "#CCE8DE", "#F9CC99", "#D2EAF5",
+                         "#ADCDAD", "#CCDCE8", "#DCD8E5", "#F4D2D1", "#FDD466")
+
+
+biocopy_brew= c("#A2C510", "#2C4255", "#64686A",  "#5698A3", "#A2D5C3", "#ECDBAD", "#99CFE9", 
+                "#C61E19", "#4F3D7F", "#F08000", "#ABCB28", "#747779", "#415566", "#338232",
+                "#00508A", "#FBB800", "#69A4AD", "#ADD9C9", "#5C9B5B", "#D14B47", "#FCC633", 
+                "#F39933", "#3373A1", "#726499", "#85B484", "#DD7875", "#FDD466", "#F6B366", 
+                "#6696B9", "#958BB2", "#ADCDAD", "#E8A5A3", "#B5D140", "#838688", "#566877", 
+                "#BED658", "#939597", "#6B7B88", "#FDE399", "#F9CC99", "#99B9D0", "#B9B1CC", 
+                "#D6E6D6", "#F4D2D1", "#C7DC70", "#A2A4A6", "#808E99", "#D1E288", "#B2B4B5", 
+                "#96A1AA", "#DAE89F", "#C1C3C3", "#ABB3BB", "#E3EEB7", "#D1D2D2", "#C0C6CC", 
+                "#ECF3CF", "#E0E1E1", "#D5D9DD", "#F6F9E7", "#F0F0F0", "#EAECEE", "#438D99", 
+                "#98D0BC", "#EAD7A4", "#8ECAE6", "#EEDFB6", "#A5D5EB", "#7BAFB8", "#B7DED0", 
+                "#F0E3BF", "#B0DAEE", "#8EBBC2", "#C1E3D7", "#F2E7C8", "#BBDFF0", "#A1C6CC", 
+                "#CCE8DE", "#F5EBD2", "#C7E5F3", "#B4D1D6", "#D6ECE4", "#F7EFDB", "#D2EAF5", 
+                "#C7DDE0", "#E0F1EB", "#F9F3E4", "#DDEFF8", "#D9E8EB", "#EAF6F2", "#FBF7ED", 
+                "#E8F4FA", "#ECF4F5", "#F5FAF8", "#FDFBF6", "#F4FAFD", "#FEF1CC", "#FCE6CC")
+
+summary_df = data.frame()
+```
+
+```{r readin_prediction, include=F, echo=FALSE, comment="#"}
+summary_df = data.frame()
+# read in mhcflurry
+files = list.files(path = params$preds, pattern = "predictions.csv$", full.names = T)
+preds_mhcflurry = data.frame()
+for(file in files){
+  tmp = read.csv(file)
+  if(nrow(tmp)>0){
+    tmp$chr = basename(file) %>% gsub("\\_predictions\\.csv$", "", .)
+    preds_mhcflurry = rbind(preds_mhcflurry, tmp)
+    }
+}
+
+preds_mhcflurry = preds_mhcflurry %>% relocate(chr)
+preds_mhcflurry = preds_mhcflurry %>% 
+  mutate(
+    binder = case_when(
+      affinity < 50 ~ "High",
+      affinity < 500 ~ "Medium",
+      affinity < 5000 ~ "Low",
+      TRUE ~ "Random"),
+    presented = case_when(
+      presentation_percentile <= 1 ~ "Very high",
+      presentation_percentile <= 2 ~ "High",
+      TRUE ~ "Random"),
+    Wildtype = case_when(
+      Note != "" ~ "No",
+      TRUE ~ "Yes"
+    )
+) 
+
+# summary table
+
+Note = "unique enteries (Gene id, transcript id, Peptide sequence)"
+x = preds_mhcflurry %>%
+  select(ensembl_gene_id, uniprot, peptide) %>%
+  distinct(.keep_all = T) %>% nrow()
+
+# peptides part
+summary_df = rbind(summary_df, data.frame("Step" = c("Unique enteries", "Unique peptides sequences"), 
+                                          "Count" = c(x, length(unique(preds_mhcflurry$peptide))), 
+                                          "Note" = c(Note, "WT + MUT")))
+
+Note = "Unique peptides-sequences that contain spectial characters due to mutations or gaps."
+
+x = preds_mhcflurry %>% filter(stringr::str_detect(peptide, "[^A-Za-z]")) %>%
+distinct(peptide, .keep_all = T) %>% nrow()
+summary_df = rbind(summary_df, data.frame("Step" = "Irregular peptides", 
+                                          "Count" = x, "Note" = Note))
+
+# prediction part
+x = preds_mhcflurry %>%
+  select(ensembl_gene_id,ensembl_transcript_id, peptide, affinity) %>%
+  distinct(.keep_all = T) 
+
+Note = "Unique entries with in-silico prediction  (UniProt + ENSG + peptide seq) "
+summary_df = rbind(summary_df, data.frame("Step" = c("Total enteries", "Unique peptides sequences"), 
+                                          "Count" = c(nrow(x) - nrow(x[is.na(x$affinity),]), length(unique(x$peptide[!is.na(x$affinity)]))), 
+                                          "Note" = c(Note, "With in-silico predition (WT + MUT)")))
+
+```
+
+## Data and analysis steps
+
+```{r print_summary_tbl, echo=FALSE, eval=T}
+
+
+kable(summary_df) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F) %>%
+  pack_rows(index = c("Peptides" = 3, "Prediction" = 2), 
+            label_row_css = "background-color: #A2C510; color: #fff;") %>%
+  footnote(number = c("Duplicates are caused by cross refrences.",
+                      "There is no in-silico binding affinity prediction for irregular peptides."),
+           footnote_as_chunk = F, title_format = c("italic", "underline")
+           )
+```
+
+
+## Prediction metrics
+
+`MHCflurry` was used to predict in-silico the affinity of detected offtopes to the HLA-allele in question. The tool was trained using mass spectrometry datasets for model selection and showed competitive accuracy with standard tools. Check the QC report for comparison.
+
+Here, we report three different predictions: 
+
+- **binding affinity**: given as affinities (KD) in nM As recommeded in [IEDB documantation](https://nextgen-tools.iedb.org/docs/tools/tcell/index.html#thresholds-and-interpreting-scores) and in MHCflurry papers ([1](https://www.cell.com/action/showPdf?pii=S2405-4712%2820%2930239-8), [2](https://www.cell.com/cell-systems/pdf/S2405-4712(18)30232-1.pdf))
+   * KD < 50 nM -> high affinity (<SPAN STYLE="color: #438D99"> - - - </SPAN>)
+   * KD < 500 nM -> medium affinity (<SPAN STYLE="color: #F08000"> - - - </SPAN>)
+   * KD < 5000 nM -> low affinity (<SPAN STYLE="color: #2C4255"> - - - </SPAN>)
+- **processing score**: AP prediction using larger and potentially more biologically relevant datasets
+- **presentation score**:  logistic regression model that combines the (log) binding affinity prediction with the processing score to give a composite prediction (experimental [Ref](https://openvax.github.io/mhcflurry/commandline_tutorial.html#scanning-protein-sequences-for-predicted-mhc-i-ligands)).
+
+## Data from HLA databases
+
+### HLA Ligand Atlas
+
+Binding was classified into three different classes:
+
+- **s**: strong binder against a given HLA allotype if the used tool reported it so (rank based, individual cutoffs)
+- **w**: week binder if the previous individual cutoffs were not met
+- **n**: non-binder
+  
+### IEDB
+
+Due to its extensive information, the following info was extracted:
+
+- **peptide seq**: linear_sequence, linear_sequence_length
+- **hla class**: The hla class, could be classical (I ir II) or non classical.
+- **hla allele**: Could be the exact allele or generic, i.e. the class is given instead.
+- **uniprot**: could belong to unreviewed protein
+- **qualitative_measure**: assigned categories to the data left to the curator's judgment on the manuscript  [ref](https://help.iedb.org/hc/en-us/articles/360059101311-What-does-positive-high-intermediate-low-mean-in-the-assay-description-column-)
+- **other**: assay_names,disease_names (not shown in the report)
+
+filtered by:
+
+- **taxonomy**: homo sapiens, could be termed as taxon_protein:9606-other (host_organism_iri, source_organism_iri)
+- **sequence** or **uniprot id**: linear_sequence, parent_source_antigen_iri 
+
+## Prediction and annotation 
+
+### Binding affinity
+
+```{r affinity_chr, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,4), eval=T}
+
+preds_mhcflurry = preds_mhcflurry %>% 
+  distinct(ensembl_gene_id,ensembl_transcript_id, peptide, .keep_all = T) %>%
+  mutate(chrname = gsub("chr\\_", "", chr),
+         chrname = factor(chrname, c(1:22, "X", "Y", "MT")),
+         Type = factor(ifelse(Wildtype == "Yes", "WT", "MUT"), levels = c("WT", "MUT"))
+         ) %>%
+  arrange(chrname)
+preds_mhcflurry$Protein_HLA_Atlas = "No"
+preds_mhcflurry$Peptide_HLA_Atlas = "No"
+preds_mhcflurry$Protein_IEDB = "No"
+preds_mhcflurry$Peptide_IEDB = "No"
+
+# add counts number to each chromosome
+# show KD difference between wt and mut
+unique_proteins = preds_mhcflurry$uniprot %>% unique()
+
+# plot of chromosome-wise distribution 
+ggplot(preds_mhcflurry, aes(chrname, affinity*1e-06)) + 
+  geom_boxplot(aes(fill= Type, col = Type)) + 
+  ggtitle("Distribution of bindiny affinity chromosome-wise") +
+  theme_light() +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  labs(y = "Affinity KD (M)", x = "Chromosomes",
+       caption = paste0("SNP combined population AF > 1%",
+                        "\nTotal enteries: ", nrow(preds_mhcflurry[!is.na(preds_mhcflurry$affinity),]),
+                        "\nTotal proteins: ", length(unique_proteins)),
+       subtitle = "WT vs Mutated epitopes") +
+  scale_fill_manual(values = biocopy_colors_light) +
+  scale_color_manual(values = biocopy_brew) +
+  geom_hline(yintercept = 50*1e-06, linetype = 2, color = "#438D99") +
+  geom_hline(yintercept = 500*1e-06, linetype = 2, color = "#F08000") +
+  geom_hline(yintercept = 5000*1e-06, linetype = 2, color = "#2C4255") 
+
+ggplot(preds_mhcflurry, aes(as.character(mismatch), affinity*1e-06)) + 
+  geom_boxplot(aes(fill= Type, col = Type)) + 
+  ggtitle("Distribution of bindiny affinity  vs. similarity to the target") +
+  theme_light() +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  labs(y = "Affinity KD (M)", x = "# of mismatches between target and its off-targets",
+       caption = paste0("SNP combined population AF > 1%",
+                        "\nTotal enteries: ", nrow(preds_mhcflurry[!is.na(preds_mhcflurry$affinity),]),
+                        "\nTotal proteins: ", length(unique_proteins)),
+       subtitle = "WT vs Mutated epitopes") +
+  scale_fill_manual(values = biocopy_colors_light) +
+  scale_color_manual(values = biocopy_brew)
+```
+
+### Processing and Presentation score
+
+The processing predictor is experimental. It models allele-independent effects that influence whether a peptide will be detected in a mass spec experiment. The presentation score is a simple logistic regression model that combines the (log) binding affinity prediction with the processing score to give a composite prediction. The resulting prediction may be useful for prioritizing potential epitopes, but no thresholds have been established for what constitutes a “high enough” presentation score.
+
+```{r pres_proc, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,4), eval=T}
+
+ggplot(preds_mhcflurry, aes(chrname, presentation_score)) + 
+  geom_boxplot(aes(fill= Type, col = Type)) + 
+  ggtitle("Distribution of presentation score chromosome-wise") +
+  theme_light() +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  labs(y = "Presentation score", x = "Chromosomes",
+       caption = paste0("SNP combined population AF > 1%",
+                        "\nScore range [0-1]",
+                        "\nTotal enteries: ", nrow(preds_mhcflurry[!is.na(preds_mhcflurry$affinity),]),
+                        "\nTotal proteins: ", length(unique_proteins)),
+       subtitle = "WT vs Mutated epitopes") +
+  scale_fill_manual(values = biocopy_colors_light) +
+  scale_color_manual(values = biocopy_brew) +
+  geom_hline(yintercept = 0.8, linetype = 2, color = "#FBB800")
+```
+
+> The range of antigen processing and presentation scores is from 0 to 1 with higher values indicating more favorable processing or presentation.
+
+### Correlation of prediction metrics
+
+According to `IEDB`, the percentile rank is the recommended metric for ranking binding predictions. Moreover, a percentile rank <= 1% has been demonstrated to cover 80% of the immune response for many alleles. 
+
+The MHCflurry, on the other hand assumes a percentile rank <= 2% is a representative score to the allele. The value typically ranges [0-100].
+
+```{r presPerc_KD, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,4), eval=T}
+g = ggplot(preds_mhcflurry, aes(affinity*1e-06, presentation_percentile, 
+                                text = paste("presented:", presented,
+                                             "\npeptide:", peptide,
+                                             "\nWT:", Wildtype))) +
+  geom_point(aes(fill = binder), shape = 21, col = "#2C4255", stroke = 0.2) +
+  theme_light() +
+  labs(x = "Binding affinity (KD (M))",
+       y = "Presentation percentile",
+       caption = paste0("Total enteries: ", nrow(preds_mhcflurry[!is.na(preds_mhcflurry$affinity),]),
+                        "\nTotal proteins: ", length(unique_proteins))) +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = biocopy_colors) +
+  ggtitle("Presentation percentile vs. binding affinity (KD)") +
+  geom_vline(xintercept = 50*1e-06, linetype = 2, color = "#438D99") +
+  geom_vline(xintercept = 500*1e-06, linetype = 2, color = "#F08000") +
+  geom_vline(xintercept = 5000*1e-06, linetype = 2, color = "#2C4255") +
+  geom_hline(yintercept = 1, linetype = 2, color = "#3373A1") +
+  geom_hline(yintercept = 2, linetype = 2, color = "#FBB800") 
+
+
+ggplotly(g) 
+
+g =  preds_mhcflurry %>%
+  mutate(Binding = factor(binder, levels = c("High", "Medium", "Low", "Random"))) %>%
+  ggplot(aes(Binding, fill = Binding)) +
+  geom_bar() + 
+  theme_light() +
+  labs(x = "Strength of binding affinity", y = "Number of offtopes") +
+  theme(legend.position = "none") +
+  ggtitle("Counts of offtopes according to their binding categories") + 
+  scale_fill_manual(values = biocopy_colors)
+
+ggplotly(g, tooltip = c("y", "fill")) 
+
+```
+
+```{r piechart_prep, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, results='hide',fig.keep='all', fig.dim=c(9,4), eval=T}
+ # x = preds_mhcflurry %>%
+ #   mutate(Binding = factor(binder, levels = c("High", "Medium", "Low", "Random"))) 
+ 
+Binding = factor(preds_mhcflurry$binder)
+g = PieChart(Binding, data = x$binder, hole = 0,
+         fill = biocopy_colors[1:4],
+         color="white",eval_df=NULL,
+         main = "", quiet=getOption("quiet"),
+         labels_cex = 0.6)
+```
+
+
+> The percentile rank is the fraction of peptides drawn randomly from UniProt that would bind as well as or better than the current peptide. Therefore, a low percentile rank indicates high affinity.
+
+> When the output is returned as IC50 values, a lower number indicates higher affinity. As a rough guideline, peptides with IC50 values <50 nM are considered high affinity, <500 nM intermediate affinity and <5000 nM low affinity. Most known epitopes have a high or intermediate affinity. Some epitopes have a low affinity, but no known T-cell epitope has an IC50 value greater than 5000.
+
+## Offtopes in HLA data bases
+
+The offtopes will be further annoated according to two different DBs, `HLA-Ligand Atlas`, and `IEDB`. The idea is to report all possible information reported in other DBs about each offtope that could eventually signifies their risk factor.
+
+The annotation is achieved via two methods:
+
+##### **Sequence matching** 
+
+this approach will try to find the sequence of the offtopes in other DBs regardless of their origin gene. If the sequence was found, all proteins in the DB containing that exact sequence will be reported. The offtope will then be assign the value "yes" for being found in the DB. If the exact sequence was not found, the offtope will be given "no".
+
+##### **Protein matching** 
+
+this approach will first check whether the proteins, in which offtopes were found, exist in other DB regardless whether the sequence of the offtopes was found.  
+
+Finding a protein in a DB specific for HLA, means that there is an evidence for it to be at least processed in a biological system. Hence, the offtope could be an unknown binding partner to the HLA allele in question. 
+
+If the protein was not _found_ the offtope will be assign the value "No" for that DB. However, it will still be included in the downstream analysis for other information of the protein might remain relevant, e.g. tissue info. 
+Nevertheless it will be given the value "No" since the epitope sequence was not found. 
+
+> The offtope will only be considered as found, "Yes", in each individual DB if and only if its sequence was reported
+
+### HLA-Ligand atlas {.tabset .tabset-fade}
+
+```{r import_hlatlas, include=T, echo=FALSE, comment="#"}
+
+donors = read.delim(paste0(params$hlAtlas, "/HLA_donors.tsv")) 
+sample_hits = read.delim(paste0(params$hlAtlas, "/HLA_sample_hits.tsv")) 
+
+protein = read.delim(paste0(params$hlAtlas, "/HLA_protein_map.tsv")) %>%
+  dplyr::rename(uniprot = uniprot_id) %>% 
+  filter(uniprot %in% preds_mhcflurry$uniprot)
+
+hlAllele = gsub("^HLA\\-","",params$hlAllele) %>% gsub("\\*", "", .)
+atlas_agg = read.delim(paste0(params$hlAtlas, "/HLA_aggregated.tsv")) %>%
+  mutate(modified_alleles = gsub("\\*", "", donor_alleles)) 
+
+hla_atlas = read.delim(paste0(params$hlAtlas, "/HLA_protein_map.tsv")) %>%
+  dplyr::rename(uniprot = uniprot_id) %>%
+  merge(., atlas_agg, by ="peptide_sequence_id")
+
+by_protein = F
+by_seq = F
+
+if(any(preds_mhcflurry$uniprot %in% hla_atlas$uniprot)) by_protein = T
+if(any(preds_mhcflurry$peptide %in% hla_atlas$peptide_sequence)) by_seq = T
+
+atlas_uniprot = unique(hla_atlas$uniprot)
+atlas_peptide = unique(hla_atlas$peptide_sequence)
+```
+
+#### Sequence match
+
+```{r seq_atlas_annot, include=by_seq, echo=FALSE, comment="#"}
+# add the flag to the final table
+preds_mhcflurry$Peptide_HLA_Atlas[preds_mhcflurry$peptide %in% hla_atlas$peptide_sequence] = "Yes"
+preds_mhcflurry$HLA_Atlas_allele = "No"
+
+
+hla_atlas = hla_atlas %>% 
+  filter(peptide_sequence %in% preds_mhcflurry$peptide) %>%
+  mutate(HLA_CLASS = factor(hla_class, levels = c("HLA-I", "HLA-II", "HLA-I+II", "HLA-I+HLA-II")))
+
+peptide_sample_hit = hla_atlas %>% 
+  separate_longer_delim(tissues, delim = ",", ) %>%
+  distinct(.keep_all = T) 
+
+tissue = factor(peptide_sample_hit$tissues, levels = sort(unique(peptide_sample_hit$tissues)))
+```
+
+```{r seq_atlas_annot_plot_1, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(7,3), eval=by_protein}
+
+# protein with binding to hla class 
+hla_atlas %>%
+  ggplot(aes(HLA_CLASS)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count") +
+  ggtitle("Matching offtopes with binding affinity to HLA class") +
+  theme_light() +
+  labs(x = "", y = "Count",
+       caption = paste("Unique offtopes:", length(unique(hla_atlas$peptide_sequence)),
+                       "/", length(unique(preds_mhcflurry$peptide)))) +
+  theme(legend.position = "none") +
+  scale_fill_manual("", values = biocopy_brew) 
+```
+
+```{r seq_atlas_annot_plot_2, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,9), eval=by_seq}
+
+peptide_sample_hit %>% 
+  ggplot(aes(tissues)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count", position = position_dodge()) +
+  ggtitle("Offtopes with binding affinity accross normal tisuues") +
+  theme_light() +
+  scale_x_discrete(limits = rev(levels(tissue))) +
+  labs(x = "Tissue", y = "Count",
+       caption = paste("Found proteins:", length(unique(peptide_sample_hit$uniprot)),
+                       "/", length(unique_proteins),
+                       "\nUnique offtopes:", length(unique(peptide_sample_hit$peptide_sequence)),
+                       "/", length(unique(preds_mhcflurry$peptide))),
+       subtitle = "Tissue annotation according to found offtopes") +
+  theme(legend.position = "bottom") +
+  scale_fill_manual("", values = biocopy_brew) +
+  coord_flip()
+
+```
+
+```{r seq_atlas_annot_plot_3, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,3), eval=by_seq}
+
+peptide_sample_hit = hla_atlas %>% 
+  separate_longer_delim(donor_alleles, delim = ",", ) %>%
+  mutate(Binder = toupper(gsub("\\/.+", "", donor_alleles)),
+         donor_alleles = gsub(".+\\/", "", donor_alleles),
+         Binder = factor(case_when(
+           Binder == "S" ~ "Strong",
+           Binder == "W" ~ "Weak",
+           TRUE ~ "Non binder"), levels = rev(c("Strong", "Weak", "Non binder"))
+         ),
+         trimed_allele = gsub("\\*", "", gsub("^HLA\\-","", donor_alleles)),
+         target_allele = ifelse(trimed_allele == hlAllele, "Yes", "No"),
+         prot_pep = paste0(uniprot, "_", peptide_sequence)
+         ) %>%
+  distinct(.keep_all = T) 
+
+target_allele = peptide_sample_hit$prot_pep[which(peptide_sample_hit$target_allele == "Yes")]
+preds_mhcflurry$prot_pep = paste0(preds_mhcflurry$uniprot , "_", preds_mhcflurry$peptide)
+preds_mhcflurry$HLA_Atlas_allele[preds_mhcflurry$prot_pep %in% target_allele] = "Yes"
+
+g = peptide_sample_hit %>% 
+  ggplot(aes(y = Binder, x = donor_alleles, text = paste("uniprot:", uniprot))) +
+  geom_point(aes(col = peptide_sequence), position=position_dodge(width=0.5)) +
+  ggtitle("Offtopes with binding affinity to HLA alleles") +
+  theme_light() +
+  labs(x = "", y = "",
+       caption = paste("Unique offtopes:", length(unique(hla_atlas$peptide_sequence)),
+                       "/", length(unique(preds_mhcflurry$peptide))),
+       subtitle = "S: strong, W: weak, N: non-binder") +
+  theme(legend.position = "bottom", axis.text.x = element_text(angle = 60, vjust = -0.00001),
+        legend.title = element_blank()) #+
+
+if(length(unique(peptide_sample_hit$peptide_sequence)) < 98) g = g + scale_color_manual("", values = biocopy_brew) 
+
+ggplotly(g) %>%
+  layout(legend = list(orientation = 'h', x = 0.1, y = -0.5))
+
+hla_atlas %>%
+  select(uniprot, peptide_sequence, hla_class, donor_alleles, tissues) %>%
+  separate_longer_delim(donor_alleles, delim = ",", ) %>%
+  datatable(data = ., caption = "",
+            filter = "bottom", style = 'bootstrap',
+            class = 'table-condensed',
+            options = list(
+              pageLength = 5,
+              scrollX = TRUE,
+              scrollCollapse = TRUE,
+              columnDefs = list(list(className = 'dt-center', targets = 1:3)) # text's align
+              )
+            )
+```
+
+`r if(!by_seq){"No Offtopes were found!"}`
+
+***
+
+#### Protein match
+
+```{r protein_atlas_annot, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,9), eval=by_protein}
+
+protein_sample_hit = sample_hits %>% 
+  filter(peptide_sequence_id %in% protein$peptide_sequence_id) %>%
+  merge(protein, ., by = "peptide_sequence_id") %>%
+  #mutate (peptide_sequence_id = NULL) %>%
+  merge(., protein, by = "uniprot") %>%
+  mutate (peptide_sequence_id = NULL, donor = NULL) %>%
+  distinct(.keep_all = T) 
+
+proteins_hla_class = protein_sample_hit %>%
+  select(hla_class, uniprot) %>%
+  distinct(.keep_all = T) %>%
+  group_by(uniprot) %>%
+  mutate(HLA_CLASS = case_when(
+                    n_distinct(hla_class) > 1 ~ "HLA-I + HLA-II",
+                    TRUE ~ first(hla_class)
+                    ),
+        HLA_CLASS = factor(HLA_CLASS, levels = c("HLA-I", "HLA-II", "HLA-I + HLA-II"))
+    ) %>%
+  distinct(uniprot, HLA_CLASS, .keep_all = T) %>%
+  ungroup() 
+
+
+PROTEIN_ATLAS_HLA_CLASS = proteins_hla_class %>%
+  select(uniprot, HLA_CLASS) 
+
+preds_mhcflurry$Protein_HLA_Atlas[preds_mhcflurry$uniprot %in% PROTEIN_ATLAS_HLA_CLASS$uniprot] = "Yes"
+tissue = factor(protein_sample_hit$tissue, levels = sort(unique(protein_sample_hit$tissue)))
+
+```
+
+```{r protein_atlas_annot_plot_1, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(7,3), eval=by_protein}
+
+# protein with binding to hla class 
+proteins_hla_class %>%
+  ggplot(aes(HLA_CLASS)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count") +
+  ggtitle("Proteins with binding affinity to HLA class") +
+  theme_light() +
+  labs(x = "", y = "Count",
+       caption = paste("Unique proteins:", nrow(PROTEIN_ATLAS_HLA_CLASS),
+                       "/", length(unique_proteins))) +
+  theme(legend.position = "none") +
+  scale_fill_manual("", values = biocopy_colors) 
+
+```
+
+```{r protein_atlas_annot_plot_2, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,9), eval=by_protein}
+
+# tissue vs. hla class 
+protein_sample_hit %>%
+  group_by(uniprot) %>%
+  mutate(HLA_CLASS = case_when(
+                    n_distinct(hla_class) > 1 ~ "HLA-I + HLA-II",
+                    TRUE ~ first(hla_class)
+                    ),
+        HLA_CLASS = factor(HLA_CLASS, levels = c("HLA-I", "HLA-II", "HLA-I + HLA-II"))
+    ) %>%
+  select(tissue, HLA_CLASS, uniprot) %>%
+  distinct(.keep_all = T) %>%
+  ggplot(aes(tissue)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count", position = position_dodge()) +
+  ggtitle("Proteins with binding affinity accross normal tisuues") +
+  theme_light() +
+  scale_x_discrete(limits = rev(levels(tissue))) +
+  labs(x = "Tissue", y = "Count",
+       caption = paste("Found proteins:", nrow(PROTEIN_ATLAS_HLA_CLASS),
+                       "/", length(unique_proteins)),
+       subtitle = "Tissue annotation according to proteins") +
+  theme(legend.position = "bottom") +
+  scale_fill_manual("", values = biocopy_colors) +
+  coord_flip()
+
+PROTEIN_ATLAS_HLA_CLASS %>%
+datatable(data = ., caption = "",
+            filter = "bottom", style = 'bootstrap', 
+            class = 'table-condensed',
+            options = list(
+              pageLength = 5,
+              scrollX = TRUE,
+              scrollCollapse = TRUE,
+              columnDefs = list(list(className = 'dt-center', targets = 1:2)) # text's align 
+              )
+            )
+```
+`r if(!by_protein){"No proteins were found!"}`
+
+***
+
+### IEDB {.tabset .tabset-fade}
+```{r read_inIEDB_anno, echo=FALSE, message=FALSE, warning=FALSE, comment="#"}
+
+by_seq_iedb = F
+by_protein_iedb = F
+
+# read in sequence match data
+iedb_anno = list.files(path = params$hlAnno, pattern = "sequence.csv$", full.names = T)
+iedb_anno_seq_df = data.frame()
+
+for(f in iedb_anno){
+  tmp <- try(read.csv(f), silent = T)
+  if (!inherits(tmp, 'try-error')) {
+    by_seq_iedb =T
+    tmp$chr = basename(f) %>% gsub("\\_IEDB.*", "", .) 
+    iedb_anno_seq_df = rbind(iedb_anno_seq_df, tmp)
+  }
+}
+
+iedb_peptide = unique(iedb_anno_seq_df$linear_sequence[iedb_anno_seq_df$linear_sequence_length == params$target_length])
+
+# read in protein match data 
+
+iedb_anno = list.files(path = params$hlAnno, pattern = "protein.csv$", full.names = T)
+iedb_anno_prot_df = data.frame()
+
+for(f in iedb_anno){
+  tmp <- try(read.csv(f), silent = T)
+  if (!inherits(tmp, 'try-error')) {
+    by_protein_iedb =T
+    tmp$chr = basename(f) %>% gsub("\\_IEDB.*", "", .) 
+    iedb_anno_prot_df = rbind(iedb_anno_prot_df, tmp)
+  }
+}
+
+iedb_uniprot = iedb_anno_prot_df %>% 
+  mutate(gsub("UNIPROT\\:","",parent_source_antigen_iri)) %>%
+  pull() %>%
+  unique()
+
+```
+
+For MHC Class I, these are the classification [ref](https://curationwiki.iedb.org/wiki/index.php/Curation_Manual2.0#Assay_Information):
+
+- IC50 < = 50nM - Positive-High
+- 51 to <= 500nM- Positive -Intermediate
+- 501 <= 5000nM - Positive-Low
+- \> 5000nM  - Negative 
+
+#### Sequence match
+
+```{r IEDB_anno_seq, echo=FALSE, message=FALSE, warning=FALSE, comment="#", eval=by_seq_iedb}
+
+iedb_anno_seq_df_fltrd = iedb_anno_seq_df %>% 
+  mutate(uniprot = gsub("UNIPROT\\:", "", parent_source_antigen_iri),
+         parent_source_antigen_iri = NULL,
+         disease_names = gsub("\\[\\'*(.+)\\'\\]$", "\\1", disease_names),
+         disease_names = case_when(
+           is.na(disease_names) ~ "Not reported",
+           disease_names == "" ~ "Not reported",
+           TRUE ~ disease_names
+           ),
+         disease_names = factor(disease_names, levels = rev(sort(unique(disease_names)))),
+         hla_class = case_when(
+           mhc_class == "I" ~ "HLA-I",
+           mhc_class == "II" ~ "HLA-II",
+           TRUE ~ "non classical"
+         )
+         ) %>%
+  relocate(chr, uniprot) %>%
+  group_by(uniprot) %>%
+  arrange(hla_class) %>%
+  mutate(HLA_CLASS = case_when(
+                    n_distinct(hla_class) > 2 ~ "HLA-I + HLA-II + non classical",
+                    n_distinct(hla_class) > 1 ~ paste0(first(hla_class), " + ", last(hla_class)),
+                    TRUE ~ first(hla_class)
+                    ),
+         trimed_allele = gsub("\\*", "", gsub("^HLA\\-","", mhc_restriction)),
+         target_allele = ifelse(trimed_allele == hlAllele, "Yes", "No"),
+         prot_pep = paste0(uniprot, "_", linear_sequence)
+         ) %>%
+  dplyr::rename(peptide = linear_sequence) %>%
+  distinct(chr, uniprot,peptide, mhc_restriction, mhc_class,qualitative_measure,.keep_all = T)
+
+preds_mhcflurry$Peptide_IEDB[preds_mhcflurry$peptide %in% iedb_anno_seq_df_fltrd$peptide] = "Yes"
+preds_mhcflurry$IEDB_allele = "No"
+
+target_allele = iedb_anno_seq_df_fltrd$prot_pep[iedb_anno_seq_df_fltrd$target_allele == "Yes"]
+preds_mhcflurry$IEDB_allele[preds_mhcflurry$prot_pep %in% target_allele] = "Yes"
+  
+```
+
+```{r IEDB_anno_seq_plot_1, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(7,3), eval=by_seq_iedb}
+
+# protein with binding to hla class 
+iedb_anno_seq_df_fltrd %>%
+  select(uniprot, HLA_CLASS) %>%
+  distinct(.keep_all = T) %>%
+  ggplot(aes(HLA_CLASS)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count") +
+  ggtitle("Offtopes with binding affinity to HLA class") +
+  theme_light() +
+  labs(x = "", y = "Count",
+       caption = paste("Total offtopes: ", length(unique(iedb_anno_seq_df_fltrd$peptide)),
+                       "/", length(unique(preds_mhcflurry$peptide)),
+                       "\n Found proteins:", length(unique(iedb_anno_seq_df_fltrd$uniprot)),
+                       "/", length(unique_proteins),
+                       "\n The peptide repertoire presented by non-classical MHC I molecules."),
+       subtitle = "") +
+  theme(legend.position = "none") +
+  scale_fill_manual("", values = biocopy_colors) 
+
+```
+
+
+```{r IEDB_anno_seq_plot_2, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,3), eval=by_seq_iedb}
+
+# protein with binding to hla class 
+g = iedb_anno_seq_df_fltrd %>%
+  distinct(mhc_restriction, qualitative_measure, peptide, .keep_all = T) %>%
+  ggplot(aes(x = mhc_restriction, y = qualitative_measure, text = paste("uniprot:", uniprot))) +
+  geom_point(aes(col = peptide), position=position_dodge(width = 0.9)) +
+  ggtitle("Offtopes with binding affinity to HLA class") +
+  theme_light() +
+  labs(x = "", y = "",
+       caption = paste("Found proteins:", length(unique(iedb_anno_seq_df_fltrd$uniprot)),
+                       "/", length(unique_proteins),
+                       "\n Total offtopes: ", length(unique(iedb_anno_seq_df_fltrd$peptide))),
+       subtitle = "Qualitative Measurement: IEDB judgment") +
+  theme(legend.position = "none", axis.text.x = element_text(angle = 60, vjust = -0.00001),
+        legend.title = element_blank()) #+
+if(length(unique(iedb_anno_seq_df_fltrd$peptide)) < 98) g = g + scale_color_manual("", values = biocopy_brew) 
+
+ggplotly(g) 
+```
+
+```{r IEDB_anno_seq_plot_3, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,7), eval=by_seq_iedb}
+
+# protein with binding to hla class 
+iedb_anno_seq_df_fltrd %>%
+  select(uniprot, disease_names, HLA_CLASS) %>%
+  distinct(.keep_all = T) %>%
+  ggplot(aes(disease_names)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count", position = "dodge2") +
+  ggtitle("List of diseases the host has, in which offtopes were detected") +
+  theme_light() +
+  labs(x = "", y = "Count",
+       caption = paste("Total offtopes: ", length(unique(iedb_anno_seq_df_fltrd$peptide)),
+                       "/", length(unique(preds_mhcflurry$peptide)),
+                       "\n Found proteins:", length(unique(iedb_anno_seq_df_fltrd$uniprot)),
+                       "/", length(unique_proteins),
+                       "\n The peptide repertoire presented by non-classical MHC I molecules."),
+       subtitle = "Host has/had a disease that is/was the result of exposure to the immunogen being curated.") +
+  theme(legend.position = "bottom") +
+  coord_flip() +
+  scale_fill_manual("", values = biocopy_colors) 
+
+iedb_anno_seq_df_fltrd %>%
+  select(chr, uniprot, peptide, mhc_restriction, hla_class, qualitative_measure, disease_names) %>%
+  datatable(data = ., caption = "",
+            filter = "bottom", style = 'bootstrap', 
+            class = 'table-condensed',
+            options = list(
+              pageLength = 5,
+              scrollX = TRUE,
+              scrollCollapse = TRUE,
+              columnDefs = list(list(className = 'dt-center', targets = 1:7)) # text's align 
+              )
+            )
+```
+`r if(!by_seq){"No Offtopes were found!"}`
+
+***
+
+#### Protein match
+
+```{r IEDB_anno_prot, echo=FALSE, message=FALSE, warning=FALSE, comment="#", eval=by_protein_iedb}
+
+iedb_anno_prot_df_fltrd = iedb_anno_prot_df %>% 
+  filter(linear_sequence_length == params$target_length) %>%
+  mutate(uniprot = gsub("UNIPROT\\:", "", parent_source_antigen_iri),
+         parent_source_antigen_iri = NULL,
+         disease_names = gsub("\\[\\'?\"?(.+)\\'?\"?\\]$", "\\1", disease_names),
+         disease_names = case_when(
+           is.na(disease_names) ~ "Not reported",
+           disease_names == "" ~ "Not reported",
+           TRUE ~ gsub("\\'", "",disease_names)
+           ),
+         disease_names = factor(disease_names, levels = rev(sort(unique(disease_names)))),
+         hla_class = case_when(
+           mhc_class == "I" ~ "HLA-I",
+           mhc_class == "II" ~ "HLA-II",
+           TRUE ~ "non classical"
+         )) %>%
+  relocate(chr, uniprot) %>%
+  group_by(uniprot) %>%
+  arrange(hla_class) %>%
+  mutate(HLA_CLASS = case_when(
+                    n_distinct(hla_class) > 2 ~ "HLA-I + HLA-II + non classical",
+                    n_distinct(hla_class) > 1 ~ paste0(first(hla_class), " + ", last(hla_class)),
+                    TRUE ~ first(hla_class)
+                    )) %>%
+  dplyr::rename(peptide = linear_sequence) %>%
+  distinct(chr, uniprot, peptide, mhc_restriction, mhc_class,qualitative_measure,.keep_all = T)
+
+preds_mhcflurry$Protein_IEDB[preds_mhcflurry$uniprot %in% iedb_anno_prot_df_fltrd$uniprot] = "Yes"
+
+```
+
+```{r IEDB_anno_prot_plot_1, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(7,3), eval=by_protein_iedb}
+
+# protein with binding to hla class 
+iedb_anno_prot_df_fltrd %>%
+  select(uniprot, HLA_CLASS) %>%
+  distinct(.keep_all = T) %>%
+  ggplot(aes(HLA_CLASS)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count", position = "dodge2") +
+  ggtitle("Proteins with peptides that have binding affinity to HLA classes") +
+  theme_light() +
+  labs(x = "", y = "Count",
+       caption = paste("Found proteins:", length(unique(iedb_anno_prot_df_fltrd$uniprot)),
+                       "/", length(unique_proteins),
+                       "\n Total offtopes: ", length(unique(iedb_anno_prot_df_fltrd$peptide)),
+                       "\n The peptide repertoire presented by non-classical MHC I molecules."),
+       subtitle = "") +
+  theme(legend.position = "none") +
+  scale_fill_manual("", values = biocopy_colors) 
+```
+
+```{r IEDB_anno_prot_plot_2, echo = FALSE, fig.align ='center', warning = FALSE, message = FALSE, fig.dim=c(9,9), eval=by_protein_iedb}
+
+# protein with binding to hla class 
+iedb_anno_prot_df_fltrd %>%
+  select(uniprot, disease_names, HLA_CLASS) %>%
+  distinct(.keep_all = T) %>%
+  ggplot(aes(disease_names)) +
+  geom_histogram(aes(fill = HLA_CLASS), stat = "count", position = "dodge2") +
+  ggtitle("List of diseases the host has, in which offtopes were detected") +
+  theme_light() +
+  labs(x = "", y = "Count",
+       caption = paste("Found proteins:", length(unique(iedb_anno_prot_df_fltrd$uniprot)),
+                       "/", length(unique_proteins),
+                       "\n Total offtopes: ", length(unique(iedb_anno_prot_df_fltrd$peptide)),
+                       "\n The peptide repertoire presented by non-classical MHC I molecules."),
+       subtitle = "Host has/had a disease that is/was the result of exposure to the immunogen being curated.") +
+  theme(legend.position = "bottom") +
+  coord_flip() +
+  scale_fill_manual("", values = biocopy_colors) 
+
+iedb_anno_prot_df_fltrd %>%
+  select(chr, uniprot, HLA_CLASS) %>% # peptide, mhc_restriction, hla_class, qualitative_measure, disease_names) %>%
+  distinct(.keep_all = T) %>%
+  datatable(data = ., caption = "",
+            filter = "bottom", style = 'bootstrap', 
+            class = 'table-condensed',
+            options = list(
+              pageLength = 5,
+              scrollX = TRUE,
+              scrollCollapse = TRUE,
+              columnDefs = list(list(className = 'dt-center', targets = 1:3)) # text's align 
+              )
+            )
+```
+`r if(!by_protein){"No proteins were found!"}`
+
+***
+
+### IEDB vs. HLA-Ligand atlas {.tabset .tabset-fade}
+
+#### Sequence match
+
+`r if(!(by_seq & by_seq_iedb)){"No peptides were found in both databases!"}`
+
+```{r IEDB_atlas_seq, echo=FALSE, message=FALSE, warning=FALSE, comment="#", fig.align='center', eval=(by_seq & by_seq_iedb)}
+
+# List of sequences
+gene_list <- list(EpiTox = preds_mhcflurry$peptide, IEDB = iedb_peptide, HLA_Ligand_Atlas = atlas_peptide)
+ggvenn(gene_list, show_percentage = FALSE, fill_color =biocopy_colors, stroke_color ="white") 
+
+```
+
+#### Protein match
+
+`r if(!(by_protein & by_protein_iedb)){"No proteins were found in both databases!"}`
+
+```{r IEDB_atlas_prot, echo=FALSE, message=FALSE, warning=FALSE, comment="#", fig.align='center', eval=(by_protein & by_protein_iedb)}
+
+# List of proteins
+gene_list <- list(EpiTox = preds_mhcflurry$uniprot, IEDB = iedb_uniprot, HLA_Ligand_Atlas = atlas_uniprot)
+ggvenn(gene_list, show_percentage = FALSE, fill_color =biocopy_colors, stroke_color ="white") 
+
+```
+
+## Summary results
+
+The affinity of all offtopes were in-silico predicted against  `r params$hlAllele`; the following table shows the prediction results for binding, processing and presentation:
+
+```{r preds_mhcflurry_tbl, echo=FALSE, eval=T}
+
+cols = c("chr", "ensembl_gene_id", "ensembl_transcript_id", "uniprot", "uniprot_isoform", "Gene.Names",
+         "peptide", "mismatch", "Wildtype", 
+         "affinity", "processing_score", "presentation_percentile", "presentation_score", 
+         "Peptide_HLA_Atlas", "HLA_Atlas_allele", "Protein_HLA_Atlas", 
+          "Peptide_IEDB", "IEDB_allele", "Protein_IEDB")
+
+preds_mhcflurry %>% 
+  select(all_of(cols)) %>%
+  mutate(
+    presentation_percentile = round(presentation_percentile, digits = 5),
+    presentation_score = round(presentation_score, digits = 5),
+    affinity = round(affinity, digits = 5)
+  ) %>%
+  dplyr::rename(KD_nM = affinity) %>%
+  arrange(mismatch, KD_nM, desc(presentation_percentile), desc(Wildtype), desc(Peptide_IEDB), desc(Peptide_HLA_Atlas),) %>%
+  datatable(data = ., caption = "",
+            filter = "bottom", style = 'bootstrap', 
+            class = 'table-condensed',
+            options = list(
+              pageLength = 14,
+              scrollX = TRUE,
+              scrollCollapse = TRUE,
+              columnDefs = list(list(className = 'dt-center', targets = 1:length(cols))) # text's align 
+              )
+            )
+
+epitopes_df = preds_mhcflurry %>% 
+  select(all_of(cols)) %>%
+  openxlsx::write.xlsx(., paste0(params$outdir, ".xlsx"), row.names = F, quote = F)
+```
+
+> The threshold for peptides with a reasonable chance of being immunogenic is 500 nM = 5e-04 M; while presentation score the higher the better, 80% was chosen
+
