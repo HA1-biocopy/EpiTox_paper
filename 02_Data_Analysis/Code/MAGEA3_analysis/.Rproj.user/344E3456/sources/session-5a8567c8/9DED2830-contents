@@ -1,5 +1,5 @@
 # =============================================================================
-# bayesian_peptide_assessment.R
+# Bayesian_peptide_assessment.R
 # =============================================================================
 # Bayesian Peptide Evidence Assessment System
 #
@@ -56,8 +56,8 @@ bayesian_peptide_assessment <- function(peptide_data,
     likelihood_ratios <- list(
       # Evidence from databases/studies
       multiple_studies = 20,    # Very strong: ≥3 independent studies
-      one_study = 10,           # Strong: 2 studies
-      one_database = 5,         # Moderate: 1 study
+      two_studies = 10,           # Strong: 2 studies
+      one_study = 5,         # Moderate: 1 study
       predicted = 0.2,          # PENALTY: No experimental evidence (< 1.0)
 
       # HLA allele match
@@ -264,7 +264,7 @@ bayesian_peptide_assessment <- function(peptide_data,
 plot_probability_distribution <- function(assessed_peptides) {
   ggplot(assessed_peptides, aes(x = posterior_prob, fill = confidence_level)) +
     geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
-    geom_vline(xintercept = 50, linetype = "dashed", color = "black", size = 1) +
+    geom_vline(xintercept = 50, linetype = "dashed", color = "black", linewidth = 1) +
     scale_fill_manual(values = c("High" = "#d73027",
                                  "Medium" = "#fee090",
                                  "Low" = "#abd9e9",
@@ -362,14 +362,14 @@ generate_assessment_report <- function(assessed_peptides,
 
   # 1. Summary statistics
   summary_table <- summarize_assessment(assessed_peptides)
-  write.csv(summary_table,
-            paste0(output_prefix, "_summary.csv"),
+  openxlsx::write.xlsx(summary_table,
+            paste0(output_prefix, "_summary.xlsx"),
             row.names = FALSE)
   cat("✓ Summary statistics saved\n")
 
   # 2. Full results
-  write.csv(assessed_peptides,
-            paste0(output_prefix, "_full_results.csv"),
+  openxlsx::write.xlsx(assessed_peptides,
+            paste0(output_prefix, "_full_results.xlsx"),
             row.names = FALSE)
   cat("✓ Full results saved\n")
 
@@ -378,8 +378,8 @@ generate_assessment_report <- function(assessed_peptides,
     filter(confidence_level == "High") %>%
     arrange(desc(posterior_prob))
 
-  write.csv(high_priority,
-            paste0(output_prefix, "_high_priority.csv"),
+  openxlsx::write.xlsx(high_priority,
+            paste0(output_prefix, "_high_priority.xlsx"),
             row.names = FALSE)
   cat("✓ High priority peptides saved (n =", nrow(high_priority), ")\n")
 

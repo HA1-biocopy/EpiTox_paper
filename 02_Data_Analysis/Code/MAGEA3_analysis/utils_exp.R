@@ -21,11 +21,20 @@ extract_tissue_type <- function(disease) {
     "colon" = "colon|colorectal",
     "ovarian" = "ovarian",
     "leukemia" = "blood|leukemia|lymphoma|myeloma",
-    "glioblastoma" = "brain",
+    "glioblastoma" = "brain|glioblastoma",
     "pancreatic" = "pancreas",
     "bladder" = "bladder|urinary",
-    "cervical" = "cervix",
-    "kidney" = "kidney|renal"
+    "cervical" = "cervix|cervical",
+    "kidney" = "kidney|renal",
+    "pleural" = "pleural|mesothelioma",
+    "uterine" = "uterine|uterus",
+    "diabetes" = "pancreas",
+    "ankylosing" = "spine|joint",
+    "uveitis" = "eye",
+    "neuroblastoma" = "neural|nervous",
+    "meningioma" = "brain|meninges",
+    "osteosarcoma" = "bone",
+    "neoplasm" = NA_character_  # Generic, can't map to specific tissue
   )
 
   for (disease_key in names(tissue_map)) {
@@ -42,6 +51,19 @@ extract_tissue_type <- function(disease) {
 #' @param target_disease Target disease for comparison
 #' @return Category: "normal", "same_disease", "similar", or NA
 categorize_disease <- function(disease_string, target_disease = NULL) {
+  if (is.na(disease_string) || disease_string == "") {
+    return(NA_character_)
+  }
+
+  # CRITICAL: Check explicit normal flag first
+  if (!is.na(is_normal_flag) && (is_normal_flag == TRUE ||
+                                 tolower(as.character(is_normal_flag)) == "true" ||
+                                 tolower(as.character(is_normal_flag)) == "yes" ||
+                                 is_normal_flag == 1)) {
+    return("normal")
+  }
+
+  # If disease string is missing/empty, return NA (not "normal"!)
   if (is.na(disease_string) || disease_string == "") {
     return(NA_character_)
   }

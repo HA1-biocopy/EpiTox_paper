@@ -10,9 +10,6 @@
 # 4. Formatting for Bayesian assessment
 # =============================================================================
 
-library(dplyr)
-library(tidyr)
-
 # Source utility functions
 source("utils_exp.R")
 
@@ -59,9 +56,9 @@ aggregate_experimental_evidence <- function(experimental_df,
 
       evidence = case_when(
         n_studies >= 3 ~ "multiple_studies",
-        n_studies == 2 ~ "one_study",
-        n_studies == 1 ~ "one_database",
-        TRUE ~ NA_character_
+        n_studies == 2 ~ "two_study",
+        n_studies == 1 ~ "one_study",
+        TRUE ~ "predicted"
       ),
 
       # -----------------------------------------------------------------------
@@ -103,7 +100,20 @@ aggregate_experimental_evidence <- function(experimental_df,
       # DISEASE/TISSUE CONTEXT
       # -----------------------------------------------------------------------
       diseases = paste(unique(disease[disease != "" & !is.na(disease)]), collapse = ";"),
-      disease_tissue = categorize_disease(diseases[1], target_disease),
+      # Check if ANY entry has is_normal flag set
+      is_normal_any = any(!is.na(is_normal) &
+                            (is_normal == TRUE |
+                               tolower(as.character(is_normal)) == "true" |
+                               tolower(as.character(is_normal)) == "yes" |
+                               is_normal == 1),
+                          na.rm = TRUE),
+
+      # Categorize using explicit flag
+      disease_tissue = categorize_disease(
+        disease_string = diseases[1],
+        is_normal_flag = is_normal_any,
+        target_disease = target_disease
+      ),
 
       # -----------------------------------------------------------------------
       # METADATA (for reference)
@@ -123,6 +133,7 @@ aggregate_experimental_evidence <- function(experimental_df,
       "Median:", median(aggregated$n_studies), "\n")
   cat("Peptides with target allele:", sum(aggregated$has_target_allele, na.rm = TRUE), "\n")
   cat("Peptides with specific alleles:", sum(!is.na(aggregated$hla_allele)), "\n\n")
+  cat("Peptides from normal tissue:", sum(aggregated$is_normal_any, na.rm = TRUE), "\n\n")
 
   cat("Evidence distribution:\n")
   print(table(aggregated$evidence, useNA = "ifany"))

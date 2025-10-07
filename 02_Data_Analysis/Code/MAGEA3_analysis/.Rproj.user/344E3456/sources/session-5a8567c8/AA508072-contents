@@ -7,6 +7,9 @@
 # Author: Hoor. Al-Hasani
 # Date: 2025
 # ----------------
+library(lessR)
+library(dplyr)
+library(tidyr)
 
 # ============================================
 # # STEP 1: Load data
@@ -49,7 +52,7 @@ cutoff_4 = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Tab
   select(ensembl_gene_id, uniprot, Gene.Names, peptide, blosum_similarity, mismatch, Wildtype, Peptide_HLA_Atlas) %>%
   distinct(.keep_all = T) %>%
   mutate(id = paste0(uniprot, "_", peptide)) %>%
-  merge(., df, by = "id", all.x =T) %>%
+  #merge(., experimental_df, by = "id", all.x =T) %>%
   distinct(.keep_all = T)
 # ============================================
 
@@ -58,18 +61,32 @@ cutoff_4 = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Tab
 # # STEP 2. Load all scripts
 source("utils_exp.R")
 source("Bayesian_preprocess_experimental_data.R")
-source("bayesian_peptide_assessment.R")
+source("Bayesian_peptide_assessment.R")
 
 # # STEP 2. Preprocess
-preprocessed <- preprocess_for_bayesian(cutoff_4, experimental_df, ...)
+preprocessed <- preprocess_for_bayesian(cutoff_4, experimental_df, target_allele = "HLA-A*02:01",
+                                        target_disease = "bladder", target_class = "I")
 
+#   target_disease = "melanoma",
+#   target_class = "I"
 # ============================================
 # # STEP 3. Assess
-results <- bayesian_peptide_assessment(preprocessed, ...)
+biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#C61E19", "#438D99", "#958BB2", "#6B7B88",
+                   "#338232", "#F08000", "#3373A1", "#64686A", "#D14B47", "#98D0BC", "#4F3D7F", "#2C4255")
+
+results <- bayesian_peptide_assessment(preprocessed, target_allele, target_class)
+
+PieChart(confidence_level, data = results, hole = 0,
+         fill = biocopy_colors,
+         color="white",
+         main = paste0("Total peptides: ", nrow(results)),
+         labels_cex = 0.6)
 
 # ============================================
 # # STEP 4. Report
-generate_assessment_report(results, ...)
+DIR = "/Users/hoor.alhasani/Documents/Projects/D003/Patent_Paper/paper_materials/02_Data_Analysis/data/Bayesian/MAGEA3"
+generate_assessment_report(results,
+                           output_prefix = DIR)
 # ============================================
 #
 
