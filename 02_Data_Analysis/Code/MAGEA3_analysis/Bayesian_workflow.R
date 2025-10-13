@@ -42,14 +42,16 @@ experimental_df = lapply(files, function(f){
          disease = gsub("\\[\\'(.+)\\'\\]", "\\1", disease),
          curated_source_antigen.accession = NULL,
          id = paste0(uniprot, "_", peptide),
-         uniprot = NULL, peptide = NULL) %>%
+         uniprot = NULL, peptide = NULL,
+         is_normal = grepl("healthy", disease)) %>%
   relocate(id)
 
 
 # loading EpiTox's peptide list
 # --------------------------------
 cutoff_4 = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
-  select(ensembl_gene_id, uniprot, Gene.Names, peptide, blosum_similarity, mismatch, Wildtype, Peptide_HLA_Atlas) %>%
+  select(ensembl_gene_id, uniprot, Gene.Names, peptide, blosum_similarity, mismatch,
+         Wildtype, Peptide_HLA_Atlas, affinity, presentation_score) %>%
   distinct(.keep_all = T) %>%
   mutate(id = paste0(uniprot, "_", peptide)) %>%
   #merge(., experimental_df, by = "id", all.x =T) %>%
@@ -76,11 +78,30 @@ biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#C61E19", "#438D
 
 results <- bayesian_peptide_assessment(preprocessed, target_allele, target_class)
 
+# just for the plots
+#results = merge(results, cutoff_4[, c("id", "presentation_score")], by.x = "peptide_id", by.y = "id", all.x = T)
 PieChart(confidence_level, data = results, hole = 0,
          fill = biocopy_colors,
          color="white",
          main = paste0("Total peptides: ", nrow(results)),
          labels_cex = 0.6)
+
+PieChart(interpretation, data = results, hole = 0,
+         fill = biocopy_colors,
+         color="white",
+         main = paste0("Total peptides: ", nrow(results)),
+         labels_cex = 0.6)
+
+
+ggplot(results, aes(affinity/10^5, posterior_prob)) +
+  geom_point(size = 1, aes(col = evidence)) +
+  theme_light()
+
+ggplot(results, aes(posterior_prob, affinity/10^5)) +
+  geom_point(size = 1, aes(col = confidence_level)) +
+  theme_light() +
+  facet_wrap(~confidence_level)
+
 
 # ============================================
 # # STEP 4. Report
