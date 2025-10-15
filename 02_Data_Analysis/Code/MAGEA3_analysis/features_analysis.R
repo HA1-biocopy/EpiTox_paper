@@ -16,8 +16,6 @@ cutoff_5 = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_5/Tab
          Peptide_HLA_Atlas = ifelse(Peptide_HLA_Atlas == "Yes", 1, 0),
          Peptide_IEDB = ifelse(Peptide_IEDB == "Yes", 1, 0),
          Wildtype = ifelse(Wildtype == "Yes", 1, 0),
-         Wildtype = ifelse(Wildtype == "Yes", 1, 0),
-         Wildtype = ifelse(Wildtype == "Yes", 1, 0),
          Outcome = case_when(
            Outcome == "Binder" ~ 1,
            Outcome == "Non-Binder" ~ 0,

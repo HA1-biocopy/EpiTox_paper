@@ -30,11 +30,27 @@ cutoff_4 = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Tab
   select(chr, uniprot, Gene.Names, peptide, mismatch, blosum_similarity, Wildtype,
          affinity, processing_score, presentation_percentile,
          Ranking_score, Rank) %>%
-  distinct(peptide, .keep_all = T) %>%
-  mutate(is_known_offtarget = ifelse(peptide %in% patents_df$peptide, T, F)) %>%
+  distinct(uniprot, peptide, .keep_all = T) %>%
+  mutate(is_known_offtarget = ifelse(peptide %in% patents_df$peptide, T, F),
+         known_offtarget = ifelse(peptide %in% patents_df$peptide, "Known", "Novel")) %>%
   relocate(is_known_offtarget, .after = "Ranking_score") %>%
   arrange(-Ranking_score)
 
+library(lessR)
+PieChart(known_offtarget, data = cutoff_4, hole = 0,
+         fill = biocopy_colors,
+         color="white",
+         labels = "input",
+         #labels_size = 1,
+         main = paste0("Total peptides: ", nrow(cutoff_4)),
+         labels_cex = 0.6)
+
+
+cutoff_4 %>% filter (known_offtarget == "Known", uniprot != "P43357") %>%
+  ggplot() +
+  geom_bar(aes(mismatch), fill = "#FBB800") +
+  theme_light() + labs(x = "edit distance") +
+  ggtitle(paste0("Identified known off-target & disclosed peptides ", nrow(cutoff_4[cutoff_4$known_offtarget == "Known",])-1))
 
 
 # calculate enrichment

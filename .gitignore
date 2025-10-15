@@ -1,4 +1,7 @@
 .DS_Store
 .Rproj*
 */.Rproj*
-*/.Rproj.user
+.Rproj.user/
+.Rproj.user/
+
+
