@@ -15,7 +15,9 @@ library(ggbreak)
 # ==============================================================================
 
 df = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
-  dplyr::rename(edit_distance = mismatch)
+  dplyr::rename(edit_distance = mismatch) %>%
+  distinct(uniprot, peptide, Wildtype, .keep_all = T)
+
 df = cutoff_4 %>%
   dplyr::rename(edit_distance = mismatch)
 

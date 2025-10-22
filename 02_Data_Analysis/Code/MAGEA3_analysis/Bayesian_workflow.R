@@ -43,7 +43,10 @@ experimental_df = lapply(files, function(f){
          curated_source_antigen.accession = NULL,
          id = paste0(uniprot, "_", peptide),
          uniprot = NULL, peptide = NULL,
-         is_normal = grepl("healthy", disease)) %>%
+         is_normal = case_when(
+           disease == "healthy" ~ TRUE,
+           TRUE ~ FALSE
+         )) %>%
   relocate(id)
 
 
@@ -54,40 +57,66 @@ cutoff_4 = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Tab
          Wildtype, Peptide_HLA_Atlas, affinity, presentation_score) %>%
   distinct(.keep_all = T) %>%
   mutate(id = paste0(uniprot, "_", peptide)) %>%
+  dplyr::rename()%>%
   #merge(., experimental_df, by = "id", all.x =T) %>%
-  distinct(.keep_all = T)
+  distinct(peptide, uniprot, .keep_all = T)
 # ============================================
 
 
 # ============================================
 # # STEP 2. Load all scripts
 source("utils_exp.R")
-source("Bayesian_preprocess_experimental_data.R")
 source("Bayesian_peptide_assessment.R")
+source("Bayesian_preprocess_experimental_data.R")
+
 
 # # STEP 2. Preprocess
-preprocessed <- preprocess_for_bayesian(cutoff_4, experimental_df, target_allele = "HLA-A*02:01",
-                                        target_disease = "bladder", target_class = "I")
+preprocessed <- preprocess_for_bayesian(cutoff_4, experimental_df,
+                                        target_allele = "HLA-A*02:01",
+                                        target_disease = NULL,
+                                        target_class = "I")
 
-#   target_disease = "melanoma",
-#   target_class = "I"
 # ============================================
 # # STEP 3. Assess
 biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#C61E19", "#438D99", "#958BB2", "#6B7B88",
                    "#338232", "#F08000", "#3373A1", "#64686A", "#D14B47", "#98D0BC", "#4F3D7F", "#2C4255")
 
-results <- bayesian_peptide_assessment(preprocessed, target_allele, target_class)
+# Assess
+results <- bayesian_peptide_assessment(
+  preprocessed,
+  target_allele = "HLA-A*02:01"
+)
 
+# Report
+DIR = "/Users/hoor.alhasani/Documents/Projects/D003/Patent_Paper/paper_materials/02_Data_Analysis/data/Bayesian/MAGEA3"
+generate_assessment_report(results,
+                           output_prefix = DIR)
+
+cols = c("High" = "#C61E19",
+         "Medium" = "#FDE399",
+         "Low" = "#8ECAE6",
+         "Very Low" = "#A2C510")
 # just for the plots
 #results = merge(results, cutoff_4[, c("id", "presentation_score")], by.x = "peptide_id", by.y = "id", all.x = T)
 PieChart(confidence_level, data = results, hole = 0,
-         fill = biocopy_colors,
+         fill = cols,
          color="white",
          main = paste0("Total peptides: ", nrow(results)),
          labels_cex = 0.6)
 
+PieChart(confidence_level, data = results, hole = 0,
+         fill = cols,
+         color="white",
+         labels = "input",
+         labels_size =1.5,
+         labels_cex = 1.5,
+         labels_position= "in",
+         labels_color = c("white","black",  "white", "white"),
+         main = paste0("Total peptides: ", nrow(results))
+         )
+
 PieChart(interpretation, data = results, hole = 0,
-         fill = biocopy_colors,
+         fill = cols,
          color="white",
          main = paste0("Total peptides: ", nrow(results)),
          labels_cex = 0.6)
@@ -97,7 +126,7 @@ ggplot(results, aes(affinity/10^5, posterior_prob)) +
   geom_point(size = 1, aes(col = evidence)) +
   theme_light()
 
-ggplot(results, aes(posterior_prob, affinity/10^5)) +
+ggplot(results, aes(posterior_prob, affinity*10^-5)) +
   geom_point(size = 1, aes(col = confidence_level)) +
   theme_light() +
   facet_wrap(~confidence_level)
@@ -112,48 +141,3 @@ generate_assessment_report(results,
 #
 
 
-# =============================================================================
-# COMPLETE WORKFLOW EXAMPLE
-# =============================================================================
-
-# # STEP 1: Load all scripts
-# source("utils_exp.R")
-# source("preprocess_experimental_data.R")
-# source("bayesian_peptide_assessment.R")
-#
-# # STEP 2: Load your data
-# peptides_df <- read.csv("your_peptide_predictions.csv")
-# experimental_df <- read.csv("your_iedb_data.csv")
-#
-# # STEP 3: Preprocess
-# preprocessed_data <- preprocess_for_bayesian(
-#   peptides_df = peptides_df,
-#   experimental_df = experimental_df,
-#   target_allele = "HLA-A*02:01",
-#   target_disease = "melanoma",
-#   target_class = "I"
-# )
-#
-# # STEP 4: Run Bayesian assessment
-# results <- bayesian_peptide_assessment(
-#   peptide_data = preprocessed_data,
-#   target_allele = "HLA-A*02:01",
-#   target_class = "I",
-#   prior_prob = 0.50
-# )
-#
-# # STEP 5: Generate report
-# report <- generate_assessment_report(
-#   assessed_peptides = results,
-#   output_prefix = "my_peptide_assessment",
-#   include_plots = TRUE
-# )
-#
-# # STEP 6: View top peptides
-# top_peptides <- results %>%
-#   arrange(desc(posterior_prob)) %>%
-#   select(peptide_id, posterior_prob, confidence_level,
-#          interpretation, evidence_chain, has_target_allele, n_studies) %>%
-#   head(20)
-#
-# print(top_peptides)

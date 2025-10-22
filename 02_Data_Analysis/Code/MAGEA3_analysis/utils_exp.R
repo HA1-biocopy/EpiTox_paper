@@ -1,10 +1,12 @@
 # =============================================================================
-# utils_exp.R
+# utils_exp.R - Context-Weighted Bayesian Assessment
 # =============================================================================
 # Utility Functions for Experimental Evidence Processing
 #
-# This file contains seven helper functions used by the preprocessing and
-# Bayesian assessment scripts.
+# This version implements context-weighted evidence assessment:
+# - Prioritizes target allele match (most important)
+# - Emphasizes normal tissue detection (highest risk)
+# - Weights studies by relevance to target context
 # =============================================================================
 
 library(dplyr)
@@ -34,7 +36,7 @@ extract_tissue_type <- function(disease) {
     "neuroblastoma" = "neural|nervous",
     "meningioma" = "brain|meninges",
     "osteosarcoma" = "bone",
-    "neoplasm" = NA_character_  # Generic, can't map to specific tissue
+    "neoplasm" = NA_character_
   )
 
   for (disease_key in names(tissue_map)) {
@@ -45,15 +47,77 @@ extract_tissue_type <- function(disease) {
   return(NA_character_)
 }
 
+#' Calculate context relevance score for a study
+#'
+#' Priority: Allele match > Normal tissue > Disease match
+#'
+#' @param study_allele HLA allele from study
+#' @param study_is_normal Whether study is from normal tissue
+#' @param study_disease Disease from study
+#' @param study_class HLA class from study
+#' @param target_allele Target HLA allele
+#' @param target_disease Target disease (optional, can be NULL)
+#' @param target_class Target HLA class
+#' @return Relevance score (0.1 to 1.8)
+calculate_context_relevance <- function(study_allele,
+                                        study_is_normal,
+                                        study_disease,
+                                        study_class,
+                                        target_allele,
+                                        target_disease = NULL,
+                                        target_class = "I") {
+
+  relevance <- 0
+
+  # 1. ALLELE MATCH (Most important - up to 1.0)
+  if (!is.na(study_allele) && toupper(study_allele) != "HUMAN") {
+    if (toupper(study_allele) == toupper(target_allele)) {
+      relevance <- relevance + 1.0  # Perfect match
+    } else if (!is.na(study_class) && toupper(study_class) == toupper(target_class)) {
+      relevance <- relevance + 0.3  # Same class, different allele
+    } else {
+      relevance <- relevance + 0.1  # Different allele/class -> low evidence
+    }
+  } else {
+    # No specific allele info, use class
+    if (!is.na(study_class) && toupper(study_class) == toupper(target_class)) {
+      relevance <- relevance + 0.3
+    } else {
+      relevance <- relevance + 0.1
+    }
+  }
+
+  # 2. NORMAL TISSUE (High risk - up to 0.5)
+  if (!is.na(study_is_normal) && study_is_normal == TRUE) {
+    relevance <- relevance + 0.5
+  }
+
+  # 3. DISEASE MATCH (Optional - up to 0.3)
+  if (!is.null(target_disease) && !is.na(target_disease) && target_disease != "") {
+    if (!is.na(study_disease) && study_disease != "") {
+      # Exact disease match
+      if (grepl(target_disease, study_disease, ignore.case = TRUE)) {
+        relevance <- relevance + 0.3
+      } else {
+        # Similar disease (same tissue)
+        target_tissue <- extract_tissue_type(target_disease)
+        if (!is.na(target_tissue) && grepl(target_tissue, study_disease, ignore.case = TRUE)) {
+          relevance <- relevance + 0.1
+        }
+      }
+    }
+  }
+
+  return(relevance)
+}
+
 #' Categorize disease relevance relative to target
 #'
 #' @param disease_string Semicolon-separated disease names
-#' @param target_disease Target disease for comparison
+#' @param is_normal_flag Explicit flag for normal/healthy tissue
+#' @param target_disease Target disease for comparison (optional)
 #' @return Category: "normal", "same_disease", "similar", or NA
-categorize_disease <- function(disease_string, target_disease = NULL) {
-  if (is.na(disease_string) || disease_string == "") {
-    return(NA_character_)
-  }
+categorize_disease <- function(disease_string, is_normal_flag = NA, target_disease = NULL) {
 
   # CRITICAL: Check explicit normal flag first
   if (!is.na(is_normal_flag) && (is_normal_flag == TRUE ||
@@ -63,7 +127,7 @@ categorize_disease <- function(disease_string, target_disease = NULL) {
     return("normal")
   }
 
-  # If disease string is missing/empty, return NA (not "normal"!)
+  # If disease string is missing/empty, return NA
   if (is.na(disease_string) || disease_string == "") {
     return(NA_character_)
   }
@@ -72,8 +136,8 @@ categorize_disease <- function(disease_string, target_disease = NULL) {
   diseases_list <- strsplit(disease_string, ";")[[1]]
   diseases_list <- trimws(diseases_list)
 
-  # Check for normal/healthy tissue (highest priority)
-  if (any(grepl("healthy|normal", diseases_list, ignore.case = TRUE))) {
+  # Check for explicit "healthy" keyword
+  if (any(grepl("healthy", diseases_list, ignore.case = TRUE))) {
     return("normal")
   }
 
@@ -84,17 +148,17 @@ categorize_disease <- function(disease_string, target_disease = NULL) {
       return("same_disease")
     }
 
-    # Similar disease (same organ/tissue type)
+    # Similar disease (same tissue type)
     target_tissue <- extract_tissue_type(target_disease)
-    if (!is.na(target_tissue)) {
+    if (!is.na(target_tissue) &&  !is.null(target_disease)) {
       if (any(grepl(target_tissue, diseases_list, ignore.case = TRUE))) {
-        return("similar")
+        return("similar_tissue")
       }
     }
   }
 
-  # Has disease info but not matching target
-  return("similar")
+  # if none of the above #Has disease info but not matching target
+  return(NA_character_)# return("similar")
 }
 
 #' Get allele-specific binding information
@@ -119,7 +183,6 @@ get_allele_specific_binding <- function(alleles, bindings, target_allele) {
 
   if (!any(specific_mask)) {
     # No specific allele information
-    # Use any binding info available
     if (length(bindings) > 0 && any(!is.na(bindings))) {
       result$any_binding <- categorize_binding(bindings[!is.na(bindings)])
     }
@@ -157,7 +220,6 @@ categorize_binding <- function(binding_values) {
   binding_values <- binding_values[!is.na(binding_values)]
 
   # Prioritize: Negative > Strong > Intermediate > Weak
-  # (Negative is explicit experimental result, very informative!)
   if (any(grepl("Negative", binding_values, ignore.case = TRUE))) {
     return("negative")
   }
@@ -241,6 +303,12 @@ check_preprocessing_quality <- function(preprocessed_df) {
   cat("\n--- Evidence Quality ---\n")
   cat("  Evidence levels:\n")
   print(table(preprocessed_df$evidence, useNA = "ifany"))
+
+  # Context relevance if available
+  if ("context_relevance_category" %in% names(preprocessed_df)) {
+    cat("\n--- Context Relevance ---\n")
+    print(table(preprocessed_df$context_relevance_category, useNA = "ifany"))
+  }
 
   # Binding distribution
   cat("\n--- Binding Information ---\n")

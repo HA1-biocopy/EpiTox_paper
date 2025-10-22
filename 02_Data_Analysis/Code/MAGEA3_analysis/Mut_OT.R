@@ -12,11 +12,14 @@ epitox = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_5/Table
   relocate(Rank, .after = "peptide") %>%
   arrange(mismatch, Rank)
 
-score_reference = openxlsx::read.xlsx("/Volumes/lab/03_HighSCORE/P048/P048_01_Results Triplicates/TTP-230_new/PPB-68_kinetic_table.xlsx") %>%
+score_reference = openxlsx::read.xlsx("/Volumes/lab/03_HighSCORE/P048/P048_01_Results Triplicates/TTP-230_new/PPB-68_kinetic_table.xlsx")
+target = score_reference$KD [which(score_reference$peptide_sequence == "KVAELVHFL")] %>% mean
+
+score_mut = score_reference%>%
   dplyr::rename(peptide = peptide_sequence) %>%
-  filter (peptide %in% epitox$peptide, Outcome == "Binder") %>%
+  filter (peptide %in% cutoff_4$peptide) %>% #, Outcome == "Binder") %>%
   select(labguru_id, peptide, KD, n, lev_dist, Outcome, log2_target_FC, n_slides_QC_passed) %>%
-  merge(., cutoff_4[,c("peptide", "blosum_similarity", "Rank")], by = "peptide", all.x = T) %>%
+  merge(., cutoff_4[,c("peptide", "affinity", "blosum_similarity", "Rank", "Peptide_IEDB", "Peptide_HLA_Atlas", "Protein_IEDB")], by = "peptide", all.x = T) %>%
   arrange(lev_dist)
 
 
@@ -32,7 +35,7 @@ ggplot(cutoff_4) +
   theme_light()
 
 mut_ot = cutoff_4 %>%
-  filter(peptide %in% score_reference$peptide)
+  filter(peptide %in% score_mut$peptide)
 mut_ot_df = mut_ot[, 27:ncol(mut_ot)]
 rownames(mut_ot_df) = paste0(mut_ot$uniprot, "_", mut_ot$peptide)
 
@@ -88,6 +91,11 @@ pheatmap(df,
 
 ##########################################################
 peptides = c("FQAELVHPA", "IVAYLVHYV") #unique(score_reference$peptide)
+
+epitox = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
+  distinct(uniprot, peptide, mismatch, .keep_all = T) %>%
+  relocate(Rank, .after = "peptide") %>%
+  arrange(mismatch, Rank)
 
 df = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
   filter(uniprot %in% epitox$uniprot[epitox$peptide %in% peptides]) %>%

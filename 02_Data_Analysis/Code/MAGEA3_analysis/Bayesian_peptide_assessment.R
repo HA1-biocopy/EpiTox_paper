@@ -1,13 +1,13 @@
 # =============================================================================
-# Bayesian_peptide_assessment.R
+# bayesian_peptide_assessment.R - Context-Weighted Version
 # =============================================================================
 # Bayesian Peptide Evidence Assessment System
 #
-# This file contains:
-# 1. Main Bayesian assessment function
-# 2. Visualization functions
-# 3. Report generation
-# 4. Complete workflow example
+# This version implements Option A:
+# - Strong LRs for clear discrimination
+# - Context-weighted evidence (allele + normal tissue priority)
+# - Accept binary-like behavior for experimental evidence
+# - Provide both posterior_prob AND rank_score for flexibility
 # =============================================================================
 
 library(dplyr)
@@ -20,16 +20,12 @@ source("utils_exp.R")
 # MAIN BAYESIAN ASSESSMENT FUNCTION
 # =============================================================================
 
-#' Bayesian Evidence Assessment for Peptides
-#'
-#' Assesses peptides using Bayesian probability updating to answer:
-#' "Given the quality/level of experimental evidence, how confident are we
-#'  this peptide is meaningfully relevant?"
+#' Bayesian Evidence Assessment with Context Weighting
 #'
 #' @param peptide_data Preprocessed data frame (from preprocess_for_bayesian)
 #' @param target_allele Target HLA allele
 #' @param target_class Target HLA class
-#' @param prior_prob Starting probability (default: 0.50 - medium prior)
+#' @param prior_prob Starting probability (default: 0.50)
 #' @param likelihood_ratios Optional custom likelihood ratios
 #'
 #' @return Data frame with Bayesian assessment results
@@ -42,7 +38,7 @@ bayesian_peptide_assessment <- function(peptide_data,
 
   cat("\n")
   cat("======================================================================\n")
-  cat("BAYESIAN PEPTIDE EVIDENCE ASSESSMENT\n")
+  cat("CONTEXT-WEIGHTED BAYESIAN EVIDENCE ASSESSMENT\n")
   cat("======================================================================\n\n")
 
   cat("Configuration:\n")
@@ -51,45 +47,57 @@ bayesian_peptide_assessment <- function(peptide_data,
   cat("  Prior probability:", prior_prob, "(", prior_prob*100, "%)\n")
   cat("  Peptides to assess:", nrow(peptide_data), "\n\n")
 
-  # Default likelihood ratios (empirically justified)
+  # Default likelihood ratios (Option A - Strong discrimination)
   if (is.null(likelihood_ratios)) {
     likelihood_ratios <- list(
-      # Evidence from databases/studies
-      multiple_studies = 20,    # Very strong: ≥3 independent studies
-      two_studies = 10,           # Strong: 2 studies
-      one_study = 5,         # Moderate: 1 study
-      predicted = 0.2,          # PENALTY: No experimental evidence (< 1.0)
+      # Context-weighted evidence (Allele + Normal tissue priority)
+      multiple_high_relevance = 12,      # 2+ studies in target context
+      one_high_relevance = 8,            # 1 study in target context
+      multiple_medium_relevance = 6,     # 2+ studies with target allele
+      one_medium_relevance = 4,          # 1 study with target allele
+      multiple_low_relevance = 3,        # 2+ studies partial match
+      one_low_relevance = 2,             # 1 study partial match
+      predicted = 0.3,                    # No experimental evidence
 
-      # HLA allele match
-      same_allele = 12,         # Very strong: exact allele match
-      different_allele = 2,     # Weak: different allele
-      unknown_allele = 1,       # Neutral: no allele info
+      # HLA allele match (MOST IMPORTANT per user priority)
+      same_allele = 10,
+      different_allele = 2,
+      unknown_allele = 1,
 
-      # Binding affinity (allele-specific)
-      strong_binding = 8,       # Strong experimental binding
-      intermediate_binding = 4, # Moderate binding
-      weak_binding = 2,         # Weak but detectable
-      negative_binding = 0.1,   # STRONG PENALTY: Experimentally negative
-      no_binding = 1,           # Neutral: no binding data
+      # Binding affinity - Two-level assessment
+      # Peptide state (base)
+      strong_binder = 5,
+      intermediate_binder = 3,
+      weak_binder = 2,
+      non_binder = 1,
 
-      # Tissue/disease context
-      normal_tissue = 15,       # Very strong: found in normal (HIGH RISK!)
-      same_disease = 12,        # Strong: same disease context
-      similar_disease = 5,      # Moderate: related disease
-      unknown_tissue = 1,       # Neutral: no tissue info
+      # Target multipliers
+      strong_on_target = 2.5,
+      intermediate_on_target = 1.5,
+      weak_on_target = 1.0,
+      negative_on_target = 0.2,
+      unknown_target = 1.0,
+
+      # Tissue/disease context (Normal tissue = HIGH RISK per user priority)
+      normal_tissue = 10,
+      same_disease = 6,
+      similar_disease = 3,
+      unknown_tissue = 1,
 
       # HLA class (only when allele unknown)
-      same_class = 3,           # Weak support: same class
-      different_class = 0.5     # Penalty: different class
+      same_class = 2,
+      different_class = 0.5
     )
   }
 
-  cat("Likelihood Ratios:\n")
-  cat("  Evidence: multiple_studies =", likelihood_ratios$multiple_studies, "\n")
+  cat("Likelihood Ratios (Context-Weighted):\n")
+  cat("  Evidence: multiple_high_relevance =", likelihood_ratios$multiple_high_relevance, "\n")
+  cat("  Evidence: one_high_relevance =", likelihood_ratios$one_high_relevance, "\n")
   cat("  Evidence: predicted =", likelihood_ratios$predicted, "(penalty)\n")
-  cat("  Allele: same =", likelihood_ratios$same_allele, "\n")
-  cat("  Binding: negative =", likelihood_ratios$negative_binding, "(strong penalty)\n")
-  cat("  Tissue: normal =", likelihood_ratios$normal_tissue, "\n\n")
+  cat("  Allele: same =", likelihood_ratios$same_allele, "(PRIORITY)\n")
+  cat("  Binding: strong × strong_on_target = max",
+      likelihood_ratios$strong_binder * likelihood_ratios$strong_on_target, "\n")
+  cat("  Tissue: normal =", likelihood_ratios$normal_tissue, "(HIGH RISK)\n\n")
 
   # Initialize output columns
   peptide_data$prior_prob <- prior_prob
@@ -112,7 +120,7 @@ bayesian_peptide_assessment <- function(peptide_data,
     evidence_components <- c()
 
     # -------------------------------------------------------------------------
-    # 1. EVIDENCE LEVEL
+    # 1. CONTEXT-WEIGHTED EVIDENCE
     # -------------------------------------------------------------------------
     if (!is.na(peptide_data$evidence[i])) {
       evidence_key <- tolower(as.character(peptide_data$evidence[i]))
@@ -127,7 +135,7 @@ bayesian_peptide_assessment <- function(peptide_data,
     }
 
     # -------------------------------------------------------------------------
-    # 2. HLA ALLELE MATCH
+    # 2. HLA ALLELE MATCH (MOST IMPORTANT)
     # -------------------------------------------------------------------------
     allele_used <- FALSE
     if (!is.na(peptide_data$hla_allele[i])) {
@@ -148,23 +156,43 @@ bayesian_peptide_assessment <- function(peptide_data,
     }
 
     # -------------------------------------------------------------------------
-    # 3. BINDING AFFINITY (allele-specific)
+    # 3. BINDING AFFINITY (Two-level: peptide state × target status)
     # -------------------------------------------------------------------------
     if (!is.na(peptide_data$binding_affinity[i])) {
       binding_cat <- tolower(as.character(peptide_data$binding_affinity[i]))
-      lr_key <- paste0(binding_cat, "_binding")
 
-      if (lr_key %in% names(likelihood_ratios)) {
-        lr <- likelihood_ratios[[lr_key]]
-        odds <- odds * lr
-        lr_product <- lr_product * lr
-        evidence_components <- c(evidence_components,
-                                 sprintf("Binding[%s:%.1f]", binding_cat, lr))
+      # Get base LR from peptide binding state
+      base_lr <- switch(binding_cat,
+                        "strong" = likelihood_ratios$strong_binder,
+                        "intermediate" = likelihood_ratios$intermediate_binder,
+                        "weak" = likelihood_ratios$weak_binder,
+                        "negative" = likelihood_ratios$non_binder,
+                        1)
+
+      # Get target multiplier (if we know target allele status)
+      target_mult <- 1.0
+      if (!is.na(peptide_data$has_target_allele[i]) && peptide_data$has_target_allele[i]) {
+        # We have target-specific binding info
+        target_mult <- switch(binding_cat,
+                              "strong" = likelihood_ratios$strong_on_target,
+                              "intermediate" = likelihood_ratios$intermediate_on_target,
+                              "weak" = likelihood_ratios$weak_on_target,
+                              "negative" = likelihood_ratios$negative_on_target,
+                              1.0)
+      } else {
+        # No target-specific info, use neutral multiplier
+        target_mult <- likelihood_ratios$unknown_target
       }
+
+      final_binding_lr <- base_lr * target_mult
+      odds <- odds * final_binding_lr
+      lr_product <- lr_product * final_binding_lr
+      evidence_components <- c(evidence_components,
+                               sprintf("Binding[%s×%.1f=%.1f]", binding_cat, target_mult, final_binding_lr))
     }
 
     # -------------------------------------------------------------------------
-    # 4. TISSUE/DISEASE CONTEXT
+    # 4. TISSUE/DISEASE CONTEXT (Normal tissue = HIGH RISK)
     # -------------------------------------------------------------------------
     if (!is.na(peptide_data$disease_tissue[i])) {
       tissue_key <- tolower(as.character(peptide_data$disease_tissue[i]))
@@ -175,9 +203,9 @@ bayesian_peptide_assessment <- function(peptide_data,
       } else if (tissue_key == "normal") {
         lr <- likelihood_ratios$normal_tissue
         tissue_label <- "normal"
-      } else if (tissue_key == "similar") {
+      } else if (tissue_key == "similar_tissue") {
         lr <- likelihood_ratios$similar_disease
-        tissue_label <- "similar"
+        tissue_label <- "similar_tissue"
       } else {
         lr <- likelihood_ratios$unknown_tissue
         tissue_label <- "unknown"
@@ -258,102 +286,45 @@ bayesian_peptide_assessment <- function(peptide_data,
 # =============================================================================
 
 #' Plot probability distribution by confidence level
-#'
-#' @param assessed_peptides Output from bayesian_peptide_assessment
-#' @return ggplot object
 plot_probability_distribution <- function(assessed_peptides) {
   ggplot(assessed_peptides, aes(x = posterior_prob, fill = confidence_level)) +
     geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
-    geom_vline(xintercept = 50, linetype = "dashed", color = "black", linewidth = 1) +
-    scale_fill_manual(values = c("High" = "#d73027",
-                                 "Medium" = "#fee090",
-                                 "Low" = "#abd9e9",
-                                 "Very Low" = "#4575b4")) +
-    labs(title = "Posterior Probability Distribution",
-         subtitle = "Higher probability = stronger experimental evidence",
+    geom_vline(xintercept = 50, linetype = "dashed", color = "black", size = 1) +
+    scale_fill_manual(values = c("High" = "#C61E19",
+                                 "Medium" = "#FDE399",
+                                 "Low" = "#8ECAE6",
+                                 "Very Low" = "#A2C510")) +
+    labs(title = "Posterior Probability Distribution (Context-Weighted)",
+         subtitle = "Higher probability = stronger experimental evidence in target context",
          x = "Posterior Probability (%)",
          y = "Count",
          fill = "Confidence Level") +
     theme_minimal() +
-    theme(plot.title = element_text(face = "bold", size = 14),
-          legend.position = "right")
+    theme(plot.title = element_text(face = "bold", size = 14))
 }
 
 #' Plot prior vs posterior comparison
-#'
-#' @param assessed_peptides Output from bayesian_peptide_assessment
-#' @return ggplot object
 plot_prior_vs_posterior <- function(assessed_peptides) {
   assessed_peptides$delta <- assessed_peptides$posterior_prob - assessed_peptides$prior_prob
 
   ggplot(assessed_peptides, aes(x = prior_prob, y = posterior_prob)) +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
     geom_point(aes(color = confidence_level, size = abs(delta)), alpha = 0.6) +
-    scale_color_manual(values = c("High" = "#d73027",
-                                  "Medium" = "#fee090",
-                                  "Low" = "#abd9e9",
-                                  "Very Low" = "#4575b4")) +
+    scale_color_manual(values = c("High" = "#C61E19",
+                                  "Medium" = "#FDE399",
+                                  "Low" = "#8ECAE6",
+                                  "Very Low" = "#A2C510")) +
     scale_size_continuous(range = c(1, 8)) +
-    labs(title = "Impact of Evidence on Belief",
+    labs(title = "Impact of Context-Weighted Evidence",
          subtitle = "Distance from diagonal = strength of evidence effect",
          x = "Prior Probability (%)",
          y = "Posterior Probability (%)",
          color = "Confidence Level",
          size = "Evidence Impact") +
-    theme_minimal() +
-    theme(plot.title = element_text(face = "bold", size = 14))
+    theme_minimal()
 }
-
-#' Plot evidence vs prediction score (if available)
-#'
-#' @param assessed_peptides Output from bayesian_peptide_assessment
-#' @param presentation_score_col Name of column with presentation score
-#' @return ggplot object or NULL
-plot_evidence_vs_prediction <- function(assessed_peptides,
-                                        presentation_score_col = "presentation_score") {
-
-  if (!presentation_score_col %in% names(assessed_peptides)) {
-    cat("Column", presentation_score_col, "not found. Skipping plot.\n")
-    return(NULL)
-  }
-
-  ggplot(assessed_peptides, aes_string(x = presentation_score_col, y = "posterior_prob")) +
-    geom_point(aes(color = confidence_level, size = lr_product), alpha = 0.6) +
-    geom_hline(yintercept = 70, linetype = "dashed", color = "red") +
-    geom_vline(xintercept = 70, linetype = "dashed", color = "red") +
-    annotate("text", x = 85, y = 85,
-             label = "HIGH PRIORITY\n(Evidence + Prediction)",
-             fontface = "bold", size = 3) +
-    annotate("text", x = 85, y = 30,
-             label = "Predicted\n(Needs validation)", size = 3) +
-    annotate("text", x = 30, y = 85,
-             label = "Evidence\n(Check prediction)", size = 3) +
-    annotate("text", x = 30, y = 30,
-             label = "Low priority", size = 3) +
-    scale_color_manual(values = c("High" = "#d73027",
-                                  "Medium" = "#fee090",
-                                  "Low" = "#abd9e9",
-                                  "Very Low" = "#4575b4")) +
-    labs(title = "Experimental Evidence vs Computational Prediction",
-         subtitle = "Quadrants guide prioritization strategy",
-         x = "Presentation Score (Prediction)",
-         y = "Posterior Probability (Bayesian Evidence %)",
-         color = "Evidence Confidence",
-         size = "Evidence Strength") +
-    theme_minimal() +
-    theme(plot.title = element_text(face = "bold", size = 14))
-}
-
-# =============================================================================
-# REPORT GENERATION
-# =============================================================================
 
 #' Generate complete assessment report
-#'
-#' @param assessed_peptides Output from bayesian_peptide_assessment
-#' @param output_prefix Prefix for output files
-#' @param include_plots Whether to generate plots
-#' @return List with summary and high priority peptides
 generate_assessment_report <- function(assessed_peptides,
                                        output_prefix = "peptide_assessment",
                                        include_plots = TRUE) {
@@ -383,7 +354,21 @@ generate_assessment_report <- function(assessed_peptides,
             row.names = FALSE)
   cat("✓ High priority peptides saved (n =", nrow(high_priority), ")\n")
 
-  # 4. Generate plots
+  # 4. Context relevance breakdown
+  if ("context_relevance_category" %in% names(assessed_peptides)) {
+    context_summary <- assessed_peptides %>%
+      filter(has_experimental_data == TRUE) %>%
+      group_by(context_relevance_category, confidence_level) %>%
+      summarise(count = n(), .groups = "drop") %>%
+      arrange(desc(count))
+
+    openxlsx::write.xlsx(context_summary,
+              paste0(output_prefix, "_context_summary.xlsx"),
+              row.names = FALSE)
+    cat("✓ Context relevance summary saved\n")
+  }
+
+  # 5. Generate plots
   if (include_plots) {
     p1 <- plot_probability_distribution(assessed_peptides)
     ggsave(paste0(output_prefix, "_distribution.png"), p1, width = 10, height = 6)
@@ -402,3 +387,54 @@ generate_assessment_report <- function(assessed_peptides,
   ))
 }
 
+# =============================================================================
+# COMPLETE WORKFLOW EXAMPLE
+# =============================================================================
+
+# # STEP 1: Load all scripts
+# source("utils_exp.R")
+# source("preprocess_experimental_data.R")
+# source("bayesian_peptide_assessment.R")
+#
+# # STEP 2: Load your data
+# peptides_df <- read.csv("your_peptide_predictions.csv")
+# experimental_df <- read.csv("your_iedb_data.csv")  # MUST have 'is_normal' column!
+#
+# # STEP 3: Preprocess (target_disease is OPTIONAL!)
+# preprocessed_data <- preprocess_for_bayesian(
+#   peptides_df = peptides_df,
+#   experimental_df = experimental_df,
+#   target_allele = "HLA-A*02:01",
+#   target_disease = NULL,  # Can specify disease or leave NULL
+#   target_class = "I"
+# )
+#
+# # STEP 4: Run Bayesian assessment
+# results <- bayesian_peptide_assessment(
+#   peptide_data = preprocessed_data,
+#   target_allele = "HLA-A*02:01",
+#   target_class = "I",
+#   prior_prob = 0.50
+# )
+#
+# # STEP 5: Generate report
+# report <- generate_assessment_report(
+#   assessed_peptides = results,
+#   output_prefix = "context_weighted_assessment",
+#   include_plots = TRUE
+# )
+#
+# # STEP 6: View top peptides by context
+# top_by_context <- results %>%
+#   filter(has_experimental_data == TRUE) %>%
+#   arrange(desc(posterior_prob)) %>%
+#   select(peptide_id, posterior_prob, confidence_level,
+#          context_relevance_category, has_target_allele,
+#          n_high_relevance, evidence_chain) %>%
+#   head(20)
+#
+# print(top_by_context)
+#
+# # STEP 7 (OPTIONAL): Combine with similarity for smooth ranking
+# results$rank_score <- results$posterior_prob * results$similarity_score  # If you have similarity_score
+# results_ranked <- results %>% arrange(desc(rank_score))
