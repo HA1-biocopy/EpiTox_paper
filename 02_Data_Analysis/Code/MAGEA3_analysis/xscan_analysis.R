@@ -4,6 +4,8 @@
 library(tidyverse)
 library(pheatmap)
 library(RColorBrewer)
+library(ggpubr)
+library(gridExtra)
 
 source("xscan_target_utils.R")
 
@@ -24,13 +26,16 @@ anchor_results <- analyze_position_compensation(anchor_results)
 # ============================================================================
 # Plot 1: Update fill aesthetic
 L = nchar(target$peptide)
+biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#C61E19", "#438D99", "#958BB2", "#6B7B88",
+                   "#338232", "#F08000", "#3373A1", "#64686A", "#D14B47", "#98D0BC", "#4F3D7F", "#2C4255")
+
 
 p1 = ggplot(anchor_results, aes(x = Position, y = Fold_Change_Mean)) +
   geom_col(aes(fill = Category), color = "#2C4255") +  # Changed from Is_Anchor to Category
   geom_hline(yintercept = 1, linetype = "dashed", color = "#A2C510") +
   scale_fill_manual(values = c("Classical Anchor" = "#A2C510",
-                               "Permissive" = "steelblue",
-                               "Flexible Anchor" = "purple",
+                               "Permissive" = "#99CFE9",
+                               "Flexible Anchor" = "#4F3D7F",
                                "Neutral" = "#F0F0F0"),
                     name = "Position Type") +
   labs(title = "Mean Fold Change in KD by Position",
@@ -46,20 +51,22 @@ p1 = ggplot(anchor_results, aes(x = Position, y = Fold_Change_Mean)) +
 
   # Plot 2: COMPLETELY REPLACED - now shows permissiveness
   p2 = ggplot(anchor_results, aes(x = Position, y = Percent_Better_Than_WT)) +
-  geom_col(aes(fill = Category), color = "#2C4255") +
-  geom_hline(yintercept = 50, linetype = "dashed", color = "#A2C510") +
-  scale_fill_manual(values = c("Classical Anchor" = "#A2C510",
-                               "Permissive" = "steelblue",
-                               "Flexible Anchor" = "purple",
+    geom_col(aes(fill = Category), color = "#2C4255") +
+    geom_hline(yintercept = 50, linetype = "dashed", color = "#2C4255") +
+    scale_fill_manual(values = c("Classical Anchor" = "#A2C510",
+                               "Permissive" = "#99CFE9",
+                               "Flexible Anchor" = "#4F3D7F",
                                "Neutral" = "#F0F0F0"),
                     name = "Position Type") +
-  labs(title = "Position Permissiveness",
-       subtitle = "% of mutations that maintain/improve binding",
+    labs(title = "Position Permissiveness",
+       subtitle = "% of substitutions that maintain/improve binding",
        x = "Peptide Position",
        y = "% Better or Equal to WT") +
-  theme_minimal() + theme(text = element_text(size = 10),
-                          legend.position = "none") +
-    scale_x_continuous(breaks = 1:L)
+    theme_light() +
+    theme(text = element_text(size = 10),
+                          legend.position = "bottom") +
+    scale_x_continuous(breaks = 1:L) +
+    coord_flip()
 
 # Plot 3: COMPLETELY REPLACED - now Fold Change vs Permissiveness
   # Replace the entire p3 plot with this improved version:
@@ -69,8 +76,8 @@ p1 = ggplot(anchor_results, aes(x = Position, y = Fold_Change_Mean)) +
     geom_hline(yintercept = 50, linetype = "dashed", alpha = 0.5) +
     geom_vline(xintercept = 1, linetype = "dashed", alpha = 0.5) +
     scale_color_manual(values = c("Classical Anchor" = "#A2C510",
-                                  "Permissive" = "steelblue",
-                                  "Flexible Anchor" = "purple",
+                                  "Permissive" = "#99CFE9",
+                                  "Flexible Anchor" = "#4F3D7F",
                                   "Neutral" = "gray70"),
                        name = "Position Type") +
     scale_size_continuous(name = "Sensitivity", range = c(2, 6)) +
@@ -158,3 +165,6 @@ print(permissive_pos)
 cat("\n\nComplete Results Table:\n")
 print(anchor_results %>% select(Position, WT_AA, Category, Fold_Change_Mean,
                                 Percent_Better_Than_WT, Sensitivity_Score))
+
+openxlsx::write.xlsx(anchor_results, "../../data/Target_positions_classification.xlsx")
+

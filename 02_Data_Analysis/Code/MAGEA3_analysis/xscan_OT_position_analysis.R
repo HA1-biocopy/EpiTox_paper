@@ -2,6 +2,7 @@
 # Analyzes where off-target peptides differ from target, classified by position type
 
 library(tidyverse)
+library(lessR)
 source("xscan_OT_utils.R")
 
 # ============================================================================
@@ -11,13 +12,14 @@ source("xscan_OT_utils.R")
 # Example target sequence and classifications
 target_sequence <- "KVAELVHFL"
 
-target_classifications <- anchor_results %>%
+target_classifications <- openxlsx::read.xlsx("../../data/Target_positions_classification.xlsx") %>%
   mutate(WT_AA = strsplit(target_sequence, "")[[1]]) %>%
   select(Position, WT_AA, Category)
 
 offtargets_data = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
-  select(peptide, Wildtype, blosum_similarity, mismatch,
+  select(uniprot, peptide, Wildtype, blosum_similarity, mismatch,
          affinity, presentation_score) %>%
+  #filter(!(uniprot == "P43357" & peptide == target_sequence)) %>%
   distinct(.keep_all = T)
 
 # Run analysis
@@ -27,7 +29,12 @@ cat("=== ANALYZING OFF-TARGET PEPTIDES ===\n\n")
 analysis_results <- analyze_offtargets(target_sequence, target_classifications, offtargets_data)
 
 # Create comprehensive summary table
-summary_table <- create_summary_table(analysis_results)
+summary_table <- create_summary_table(analysis_results) %>%
+  mutate(uniprot = gsub(".+\\_", "", id),
+         peptide = gsub("\\_.+$", "", id),
+         id = NULL) %>%
+  relocate(uniprot, peptide) %>%
+  arrange(Total_Mismatches)
 
 
 categorized <- summary_table %>%
@@ -51,7 +58,12 @@ PieChart(Category, data = categorized, hole = 0,
          labels_cex = 0.6)
 
 ggplot(categorized, aes(Total_Mismatches, fill = Category)) +
-  geom_bar(position = "dodge")
+  geom_bar(position = "dodge") +
+  theme_light() +
+  scale_fill_manual(values = biocopy_colors) +
+  labs (x = "edit distance")
+
+openxlsx::write.xlsx(categorized, "../../data/OT_positions_classification.xlsx")
 
 # Grouped bar plot
 p_grouped <- plot_mismatch_by_type(summary_table)

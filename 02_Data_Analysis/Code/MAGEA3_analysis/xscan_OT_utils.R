@@ -106,6 +106,7 @@ analyze_offtargets <- function(target_seq, target_classifications, offtargets_df
   for (i in 1:nrow(offtargets_df)) {
     off_target_seq <- offtargets_df$peptide[i]
     off_target_affinity <- offtargets_df$affinity[i]
+    off_target_id = paste0(off_target_seq, "_", offtargets_df$uniprot[i])
 
     # Extract dissimilarities
     dissim <- extract_dissimilarity_positions(target_seq, off_target_seq, target_with_types)
@@ -130,6 +131,7 @@ analyze_offtargets <- function(target_seq, target_classifications, offtargets_df
 
     # Store results
     results_list[[i]] <- list(
+      id = off_target_id,
       peptide = off_target_seq,
       affinity = off_target_affinity,
       overall_identity = overall_identity,
@@ -192,10 +194,10 @@ create_summary_table <- function(analysis_results) {
       both_percent <- 0
     }
 
+    #print(result)
     # Create row
     row <- data.frame(
-      Peptide = result$peptide,
-      Affinity = result$affinity,
+      id = result$id,
       Overall_Identity = round(result$overall_identity, 2),
       Total_Mismatches = result$total_mismatches,
       Anchor_Mismatches = anchor_mismatches,
@@ -265,14 +267,14 @@ plot_mismatch_by_type <- function(summary_table) {
 
   # Reshape data for plotting
   plot_data <- summary_table %>%
-    select(Peptide, Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches) %>%
+    select(peptide, Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches) %>%
     pivot_longer(cols = c(Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches),
                  names_to = "Mismatch_Type",
                  values_to = "Count") %>%
     mutate(Mismatch_Type = gsub("_Mismatches", "", Mismatch_Type))
 
   # Create plot
-  p <- ggplot(plot_data, aes(x = Peptide, y = Count, fill = Mismatch_Type)) +
+  p <- ggplot(plot_data, aes(x = peptide, y = Count, fill = Mismatch_Type)) +
     geom_bar(stat = "identity", position = "dodge", color = "#2C4255", size = 0.5) +
     scale_fill_manual(values = c("Anchor" = "#A2C510",
                                  "Exposed" = "steelblue",
@@ -307,7 +309,7 @@ plot_mismatch_stacked <- function(summary_table) {
 
   # Reshape data for plotting
   plot_data <- summary_table %>%
-    select(Peptide, Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches) %>%
+    select(peptide, Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches) %>%
     pivot_longer(cols = c(Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches),
                  names_to = "Mismatch_Type",
                  values_to = "Count") %>%
@@ -315,7 +317,7 @@ plot_mismatch_stacked <- function(summary_table) {
            Mismatch_Type = factor(Mismatch_Type, levels = c("Anchor", "Both", "Exposed")))
 
   # Create plot
-  p <- ggplot(plot_data, aes(x = Peptide, y = Count, fill = Mismatch_Type)) +
+  p <- ggplot(plot_data, aes(x = peptide, y = Count, fill = Mismatch_Type)) +
     geom_bar(stat = "identity", position = "stack", color = "#2C4255", size = 0.5) +
     scale_fill_manual(values = c("Anchor" = "#A2C510",
                                  "Both" = "purple",
@@ -350,7 +352,7 @@ plot_mismatch_heatmap <- function(summary_table) {
 
   # Reshape data for plotting
   plot_data <- summary_table %>%
-    select(Peptide, Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches) %>%
+    select(peptide, Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches) %>%
     pivot_longer(cols = c(Anchor_Mismatches, Exposed_Mismatches, Both_Mismatches),
                  names_to = "Mismatch_Type",
                  values_to = "Count") %>%
@@ -358,7 +360,7 @@ plot_mismatch_heatmap <- function(summary_table) {
            Mismatch_Type = factor(Mismatch_Type, levels = c("Anchor", "Both", "Exposed")))
 
   # Create plot
-  p <- ggplot(plot_data, aes(x = Peptide, y = Mismatch_Type, fill = Count)) +
+  p <- ggplot(plot_data, aes(x = peptide, y = Mismatch_Type, fill = Count)) +
     geom_tile(color = "white", size = 1) +
     geom_text(aes(label = Count), color = "white", fontface = "bold", size = 5) +
     scale_fill_gradient2(low = "#F0F0F0", mid = "steelblue", high = "#A2C510",
