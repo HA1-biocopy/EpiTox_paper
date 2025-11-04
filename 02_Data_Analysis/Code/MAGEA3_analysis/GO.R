@@ -14,7 +14,8 @@ library(dplyr)
 
 # Your protein/gene list (replace with your data)
 # Can be gene symbols, Entrez IDs, Ensembl IDs, or UniProt IDs
-gene_list <- peptide_data$uniprot[peptide_data$Rank == "High"] %>% unique()
+peptide_data = epitox %>% mutate(uniprot = gsub("\\_.+$", "", id))
+gene_list <- peptide_data$uniprot[peptide_data$known_peptide == "unkwon"] %>% unique()
 
 # Convert to Entrez IDs if needed (from gene symbols)
 gene_entrez <- bitr(gene_list,

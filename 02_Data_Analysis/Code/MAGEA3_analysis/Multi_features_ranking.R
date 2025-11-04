@@ -67,10 +67,17 @@ epitox = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table
          known_peptide = ifelse(peptide %in% known_ot$peptide, "Known", "unkwon"),
          Rank = ifelse(Rank == "Random", "Low", Rank)) %>%
   distinct(id, .keep_all = T) %>%
-  dplyr::rename(Bi_features_score = Ranking_score) %>%
+  dplyr::rename(Bi_features_score = Ranking_score,
+                Bi_feature_rank = Rank) %>%
   merge(., positions_categories, by ="id") %>%
   merge(., bayesian, by ="id") %>%
   relocate(anchor_status, .after = "mismatch")
+
+
+# results for figure 2
+epitox %>% select(confidence_level) %>% table
+epitox %>% filter(grepl("normal|health", evidence_chain)) %>% nrow
+epitox %>% filter(grepl("allele\\[same", evidence_chain, ignore.case = T)) %>% nrow
 
 #============================================================================
 # COMPUTE MULTI-BIOPHYSICAL FEATURES
@@ -227,17 +234,17 @@ peptide_data %>%
   mutate(percentage = n / sum(n) * 100) %>%
   print()
 
-ggplot(peptide_data, aes(Bi_features_score, multibiophys_distance)) +
+ggplot(peptide_data, aes(Bi_features_score, multibiophys_similarity)) +
   geom_point() +
   geom_smooth() +
   theme_light()
 
-cor(peptide_data$Bi_features_score, peptide_data$multibiophys_distance, method = "spearman")
+cor(peptide_data$Bi_features_score, peptide_data$multibiophys_similarity, method = "spearman")
 #========================================================================
 # Paper summary
 #========================================================================
 peptide_data %>%
-  dplyr::select(Rank) %>%
+  dplyr::select(Bi_feature_rank) %>%
   table %>%
   prop.table()
 
@@ -246,25 +253,25 @@ peptide_data %>%
   summary()
 
 peptide_data %>%
-  group_by(Rank) %>%
+  group_by(Bi_feature_rank) %>%
   summarise(mu = median(Bi_features_score))
 
 peptide_data %>%
-  dplyr::select(Rank, Wildtype) %>%
+  dplyr::select(Bi_feature_rank, Wildtype) %>%
   table %>%
   prop.table()
 
 peptide_data %>%
-  dplyr::select(Rank, confidence_level) %>%
+  dplyr::select(Bi_feature_rank, confidence_level) %>%
   table %>%
   prop.table()
 
 peptide_data %>%
   filter(Wildtype == "No") %>%
-  group_by(Rank) %>%
+  group_by(Bi_feature_rank) %>%
   summarise(mu = median(Bi_features_score))
 
-ggplot(peptide_data, aes(confidence_level, Bi_features_score, fill = Rank)) +
+ggplot(peptide_data, aes(confidence_level, Bi_features_score, fill = Bi_feature_rank)) +
   geom_boxplot(position = "dodge") +
   theme_light() +
   labs(x = "") +
@@ -272,11 +279,13 @@ ggplot(peptide_data, aes(confidence_level, Bi_features_score, fill = Rank)) +
   theme(legend.position = "bottom") +
   scale_fill_manual(values = biocopy_colors)
 
-ggplot(peptide_data) +
+g = ggplot(peptide_data) +
   geom_histogram(aes(multibiophys_similarity), fill = biocopy_colors[1], alpha = 0.7, col = "white") +
   geom_histogram(aes(Bi_features_score), fill = biocopy_colors[2], alpha = 0.7, col = "white") +
-  labs(x = "Ranking scores distribution", caption = "Green = Bi features\nBlue = Multibiophys") +
-  theme_light()
+  labs(x = "Ranking scores distribution", caption = "Blue = Bi features\nGreen = Multibiophys") +
+  theme_light() +
+  ggtitle("Bi-features vs. Multifeatures ranking scores distribution")
+ggsave(plot = g, "../../data/Figure3_D_bi_multi_features_scores_histogram.pdf")
 
 # Compare target to dataset mean for each feature
 target_comparison <- data.frame(
@@ -390,7 +399,7 @@ print(p1)
 
 # Distribution of disagreement scores
 p2 <- ggplot(peptide_data, aes(x = score_disagreement)) +
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
+  geom_histogram(bins = 50, fill = "#8ECAE6", color = "white") +
   labs(
     title = "Distribution of Ranking Disagreements",
     subtitle = "Between Bi_features and Multi-Biophysical methods",
@@ -415,7 +424,7 @@ p3 <- ggplot(peptide_data, aes(x = anchor_status, y = score_disagreement, fill =
   theme_minimal() +
   theme(legend.position = "none") +
   scale_fill_manual(values =c("Both Anchor & Backbone" = "#FBB800",
-                              "Intact" = "#99CFE9", "anchor_mismatch" = "#C61E19"))
+                              "Intact" = "#8ECAE6", "anchor_mismatch" = "#C61E19"))
 
 print(p3)
 
@@ -495,6 +504,25 @@ p4 <- ggplot(contrib_long,
 print(p4)
 
 # ============================================================================
+# CATEGORIZE MULTI-BIOPHYSICAL DISTANCE (k-means, k=3)
+# ============================================================================
+
+# Use of the bounded similarity score
+set.seed(42)
+kmeans_result <- kmeans(peptide_data$multibiophys_similarity, centers = 3)
+
+peptide_data <- peptide_data %>%
+  mutate(
+    multibiophys_cluster = kmeans_result$cluster,
+    # Relabel so HIGH similarity = cluster 1
+    multibiophys_category = case_when(
+      multibiophys_cluster == which.max(kmeans_result$centers) ~ "High",
+      multibiophys_cluster == which.min(kmeans_result$centers) ~ "Low",
+      TRUE ~ "Moderate"
+    )
+  )
+
+# ============================================================================
 # SELECT CANDIDATES FOR EXPERIMENTAL VALIDATION
 # ============================================================================
 
@@ -534,7 +562,7 @@ validation_candidates %>%
   print()
 
 # Visualize validation candidates in ranking space
-p5 <- ggplot(peptide_data, aes(x = rank_Bi_features, y = rank_multibiophys)) +
+p5 <- ggplot(peptide_data, aes(y = rank_Bi_features, x = rank_multibiophys)) +
   geom_point(alpha = 0.3, color = "gray70") +
   geom_point(data = validation_candidates,
              aes(color = selection_reason),
@@ -552,7 +580,7 @@ p5 <- ggplot(peptide_data, aes(x = rank_Bi_features, y = rank_multibiophys)) +
   scale_color_manual(values = biocopy_colors)
 
 
-ggplot(peptide_data, aes(x = rank_Bi_features, y = rank_multibiophys)) +
+p5 <- ggplot(peptide_data, aes(x = rank_Bi_features, y = rank_multibiophys)) +
   geom_point(alpha = 0.3, color = "gray70") +
   geom_point(data = validation_candidates,
              aes(color = selection_reason),
@@ -567,14 +595,50 @@ ggplot(peptide_data, aes(x = rank_Bi_features, y = rank_multibiophys)) +
   labs(
     title = "Top Candidates for Experimental Validation",
     subtitle = "Comparing Bi_features and Multi-Biophysical rankings",
-    x = "Rank by Bi_features (Affinity + BLOSUM62)",
+    x = "Rank by Bi_features ",
     y = "Rank by Multi-Biophysical Distance"
   ) +
   theme_minimal() +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   scale_color_manual(values = biocopy_colors)
 print(p5)
+ggsave(plot = p5, "../../data/Figure3_E_bi_multi_features_scores_disagreement.pdf")
 
+# Check distribution
+cat("\n=== Multi-Biophysical Categories (k-means, k=3) ===\n")
+peptide_data %>%
+  count(multibiophys_category) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  print()
+
+peptide_data %>%
+  count(Bi_feature_rank) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  print()
+
+# Visualize
+ggplot(peptide_data) +
+  geom_histogram(aes(x = multibiophys_similarity, fill = multibiophys_category), bins = 100, alpha = 0.7) +
+  #geom_histogram(aes(x = Bi_features_score, fill = Bi_feature_rank), bins = 100, alpha = 0.7) +
+  scale_fill_manual(values = biocopy_colors) +
+  labs(
+    title = "Multi-Biophysical Distance Categories (k-means, k=3)",
+    x = "Distance from Target",
+    y = "Count",
+    fill = "Category"
+  ) +
+  theme_minimal()
+
+ggplot(peptide_data) +
+  geom_boxplot(aes(x = multibiophys_category, y = Bi_features_score, fill = Bi_feature_rank), bins = 100, alpha = 0.7) +
+  scale_fill_manual(values = biocopy_colors) +
+  labs(
+    title = "Multi-Biophysical Distance Categories (k-means, k=3)",
+    x = "Categories by Multi-features scores",
+    y = "Bi_features scores",
+    fill = "Bi features classification"
+  ) +
+  theme_minimal()
 # ============================================================================
 # EXPORT RESULTS
 # ============================================================================
@@ -582,10 +646,12 @@ print(p5)
 # Full dataset with all rankings
 openxlsx::write.xlsx(peptide_data %>%
             select(id, mismatch, Wildtype,
+                   affinity, blosum_similarity,
                    anchor_status, known_peptide,
                    confidence_level, evidence_chain,
-                   affinity, blosum_similarity, Bi_features_score,
-                   all_of(multibiophys_cols), multibiophys_distance,
+                   Bi_feature_rank, multibiophys_category,
+                   all_of(multibiophys_cols),
+                   multibiophys_similarity, Bi_features_score,
                    rank_Bi_features, rank_multibiophys,
                    rank_disagreement, score_disagreement),
           "../../data/full_peptide_rankings.xlsx")
@@ -594,8 +660,9 @@ openxlsx::write.xlsx(peptide_data %>%
 openxlsx::write.xlsx(validation_candidates %>%
             select(id, selection_reason, anchor_status,
                    rank_Bi_features, rank_multibiophys,
-                   affinity, blosum_similarity, Bi_features_score,
-                   multibiophys_distance),
+                   affinity, blosum_similarity,
+                   Bi_features_score, Bi_feature_rank,
+                   multibiophys_similarity, multibiophys_category),
           "../../data/validation_candidates.xlsx")
 
 # Top disagreements with feature contributions
@@ -607,3 +674,20 @@ cat("Results exported to:\n")
 cat("  - full_peptide_rankings.xlsx\n")
 cat("  - validation_candidates.xlsx\n")
 cat("  - top_disagreements_feature_attribution.xlsx\n")
+
+
+peptide_data %>%
+  filter(Bi_feature_rank == "High", multibiophys_category == "Low") %>%
+  distinct(peptide) %>%
+  nrow
+
+case_1 = peptide_data %>%
+  filter(Bi_feature_rank == "High", multibiophys_category == "Low")
+
+peptide_data %>%
+  filter(Bi_feature_rank == "Low", multibiophys_category == "High") %>%
+  distinct(peptide) %>%
+  nrow
+
+case_2 = peptide_data %>%
+  filter(Bi_feature_rank == "Low", multibiophys_category == "High")

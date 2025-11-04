@@ -1,0 +1,4 @@
+"id","uniprot","GeneName","peptide","Wildtype","blosum_similarity","mismatch","anchor_status","affinity","presentation_score","Bi_features_score","Bi_feature_rank","known_peptide","confidence_level","evidence_chain"
+"P30154_GIAELVHFS","P30154","PPP2R1B","GIAELVHFS","Yes",30,3,"anchor_mismatch",1313.2864629082,0.0826175433171207,0.465,"Moderate","Known","Very Low","Evidence[predicted:0.3]"
+"P43365_KMAELVHFL","P43365","MAGEA12 MAGE12","KMAELVHFL","Yes",41,1,"anchor_mismatch",10.8250372568975,0.994875989191838,0.957142857142857,"High","Known","High","Evidence[one_high_relevance:8.0] × Allele[same:10.0] × Binding[intermediate×1.5=4.5] × Tissue[normal:10.0]"
+"Q9H6S3_SAAELVHFL","Q9H6S3","EPS8L2 EPS8R2 PP13181","SAAELVHFL","Yes",35,2,"anchor_mismatch",29.474988266273,0.985316614493901,0.871428571428571,"High","Known","High","Evidence[multiple_medium_relevance:6.0] × Binding[intermediate×1.0=3.0] × Tissue[normal:10.0] × Class[same:2.0]"

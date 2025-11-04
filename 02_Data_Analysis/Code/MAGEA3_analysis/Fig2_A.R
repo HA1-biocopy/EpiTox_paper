@@ -14,11 +14,11 @@ library(ggbreak)
 # OPTION 1: Broken/Split Y-axis
 # ==============================================================================
 
-df = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
-  dplyr::rename(edit_distance = mismatch) %>%
-  distinct(uniprot, peptide, Wildtype, .keep_all = T)
+# df = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
+#   dplyr::rename(edit_distance = mismatch) %>%
+#   distinct(uniprot, peptide, Wildtype, .keep_all = T)
 
-df = cutoff_4 %>%
+df = openxlsx::read.xlsx("../../data/full_peptide_rankings.xlsx") %>%
   dplyr::rename(edit_distance = mismatch)
 
 # ==============================================================================
@@ -29,7 +29,7 @@ df = cutoff_4 %>%
 df_summary <- df %>%
   mutate(
     category = case_when(
-      is_known_offtarget ~ "Previously disclosed",
+      known_peptide == "Known" ~ "Previously disclosed",
       Wildtype == "Yes" ~ "Wildtype (novel)",
       Wildtype == "No" ~ "SNP-derived (novel)"
     ),
@@ -77,7 +77,7 @@ summary_stats <- df %>%
   group_by(Wildtype) %>%
   summarise(
     total = n(),
-    known = sum(is_known_offtarget),
+    known = sum(known_peptide == "Known"),
     novel = total - known,
     pct_known = (known / total) * 100,
     pct_novel = (novel / total) * 100,
@@ -160,8 +160,8 @@ option5_plot <- p5_panel1 + p5_panel2 +
 print(option5_plot)
 
 # Save
-# ggsave("figure2A_option5.pdf", option5_plot, width = 10, height = 4.5, dpi = 300)
-# ggsave("figure2A_option5.png", option5_plot, width = 10, height = 4.5, dpi = 300)
+ggsave("../../data/Figure2_combined_A_B.pdf", option5_plot, width = 10, height = 4.5, dpi = 300)
+ggsave("../../data/Figure2A_I.pdf", p5_panel1, width = 10, height = 4.5, dpi = 300)
 
 
 # ==============================================================================
@@ -197,4 +197,28 @@ option5_plot_log <- p5_panel1_log + p5_panel2 +
 
 print(option5_plot_log)
 #ggsave("figure2A_option5_logscale.pdf", option5_plot_log, width = 10, height = 4.5, dpi = 300)
+
+g = ggplot(df, aes(edit_distance, fill = Wildtype)) +
+  geom_bar(stat = "count", position = "dodge") +
+  scale_fill_manual(values = c("Yes" = "#A2C510", "No" = "#2C4255")) +
+  theme_light() +
+  ggtitle("Edit distance of wildetype off-targets vs. SNPs-derived peptides") +
+  scale_y_log10() +
+  labs(x = "Edit distance", y = "log10 counts")
+ggsave("../../data/Figure2_A.pdf", g, width = 10, height = 4.5, dpi = 300)
+
+
+# ks vs. anchor status -> supp
+ggplot(epitox, aes(anchor_status, affinity * 10^-6, fill = anchor_status)) +
+  geom_boxplot() +
+  geom_jitter(shape = 21) +
+  theme_light() +
+  ggtitle("Predicted affinity vs. position-specific mismatches") +
+  scale_fill_manual(values = biocopy_colors) +
+  theme(legend.position = "None") +
+  labs(x = "", y = "predicted affinity * 10^-6")
+
+
+
+
 
