@@ -1,0 +1,414 @@
+# =============================================================================
+# PAPER NARRATIVE: Four-Tier Bayesian Confidence System
+# =============================================================================
+# Complete text for Methods, Results, and Discussion sections
+# Based on actual data showing clear four-tier stratification
+# =============================================================================
+
+================================================================================
+METHODS SECTION
+================================================================================
+
+**Bayesian Evidence Integration Framework**
+
+We developed a context-aware Bayesian framework that integrates multiple lines
+of evidence to generate confidence scores for peptide-HLA pairs. The framework
+addresses two key challenges: (1) maintaining protein-specific evidence tracking
+to prevent inappropriate validation transfer across homologs, and (2) integrating
+experimental validation status with computational predictions in a probabilistically
+sound manner.
+
+**Model Structure**
+
+Starting from a neutral prior probability (50%), we update confidence based on
+available evidence using Bayes' theorem:
+
+Posterior Odds = Prior Odds × Likelihood Ratio (LR) Product
+
+where the LR product represents the multiplicative combination of independent
+evidence types.
+
+**Evidence Types and Likelihood Ratios**
+
+*Primary Evidence: Experimental Validation*
+- Experimental validation in immunological databases (e.g., IEDB): LR = 4-12
+  (weighted by context relevance: target allele matching, tissue context)
+- No experimental validation (predicted only): LR = 0.3
+  (reflects high false-positive rate of computational predictions)
+
+*Supporting Evidence (for predicted peptides):*
+- Binding affinity predictions:
+  * Strong binders: LR = 5
+  * Intermediate binders: LR = 3
+  * Weak binders: LR = 2
+  
+- HLA class matching:
+  * Same class (Class I for HLA-A*02:01): LR = 2.0
+  * Different class (Class II): LR = 0.5
+
+- Target allele matching (when available):
+  * Same allele: LR = 10
+  * Different allele: LR = 2
+
+*Context Weighting (for experimental evidence):*
+- Normal tissue detection (safety concern): LR = 10
+- Disease context match: LR = 6
+- Tissue similarity: LR = 3
+
+Evidence types combine multiplicatively following Bayes' rule. Final posterior
+probabilities are classified into four confidence tiers:
+- **High (>80%)**: Experimental validation with strong supporting evidence
+- **Medium (50-80%)**: Strong computational predictions with supporting factors
+- **Low (30-50%)**: Computational predictions with conflicting evidence
+- **Very Low (<30%)**: Minimal supporting evidence
+
+**Context-Aware Evidence Tracking**
+
+Critically, the framework maintains protein-specific evidence profiles. Unlike
+sequence-based aggregation approaches that pool evidence across all proteins
+containing a peptide sequence, our method prevents inappropriate confidence
+transfer. For example, experimental validation of KVDEJAVL in PABP1 does not
+automatically confer high confidence to the identical sequence in PABP3 (see
+Results).
+
+This protein-specific tracking is implemented by maintaining separate evidence
+profiles for each peptide-protein pair during preprocessing, with experimental
+studies matched to specific protein contexts based on database annotations.
+
+================================================================================
+RESULTS SECTION
+================================================================================
+
+**Four-Tier Confidence Stratification Demonstrates Clear Evidence Integration**
+
+The Bayesian framework analyzed 1,454 peptide-protein pairs derived from
+[YOUR PROTEIN], stratifying them into four distinct confidence tiers with no
+overlap between categories (Figure X).
+
+**High Confidence (n=159, 10.9%): Mean = 99.74%**
+These peptides have experimental validation in immunological databases, with
+posterior probabilities ranging from 98.77% to 99.99%. All 159 high-confidence
+peptides possess experimental data, with varying evidence quality reflected in
+the 1.22 percentage point range:
+- Multiple high-relevance studies (n=11): 99.98% ± 0.00%
+- Single high-relevance studies (n=15): 99.97% ± 0.01%
+- Multiple medium-relevance studies (n=82): 99.79% ± 0.12%
+- Single medium-relevance studies (n=50): 99.55% ± 0.12%
+
+Within this tier, evidence tiers document validation quality (study count,
+context relevance) while all peptides merit high confidence for clinical
+consideration. The tight clustering reflects our conservative calibration:
+experimental validation represents strong evidence regardless of granular
+tier distinctions.
+
+**Medium Confidence (n=99, 6.8%): Mean = 64.29%**
+These peptides lack experimental validation but possess strong computational
+support: predicted intermediate binding affinity (LR=3.0) combined with HLA
+Class I matching (LR=2.0), partially compensating for the predicted-only penalty
+(LR=0.3). This tier represents priority candidates for experimental validation,
+where computational predictions converge to support potential immunogenicity.
+
+Calculation: Prior (50%) × Predicted (0.3) × Intermediate binding (3.0) ×
+Class I match (2.0) = 1.8 odds → 64.29% posterior
+
+**Low Confidence (n=1, 0.07%): Mean = 31.03%**
+This single outlier peptide has predicted intermediate binding but HLA Class II
+classification (LR=0.5 penalty), representing a context mismatch for our
+HLA-A*02:01 (Class I) target. The class mismatch penalty reduces confidence
+below both the prior and the Medium tier.
+
+Calculation: Prior (50%) × Predicted (0.3) × Intermediate binding (3.0) ×
+Class II penalty (0.5) = 0.45 odds → 31.03% posterior
+
+**Very Low Confidence (n=1,195, 82.2%): Mean = 23.08%**
+These peptides lack both experimental validation and strong computational support,
+maintaining scores below the neutral prior due to the predicted-only penalty.
+The model appropriately assigns low confidence pending additional evidence.
+
+Calculation: Prior (50%) × Predicted (0.3) = 0.3 odds → 23.08% posterior
+
+**Clear Separation Validates Model Function**
+
+The four tiers demonstrate clear, non-overlapping stratification:
+- High vs. Medium: 35.5 percentage point separation
+- Medium vs. Low: 33.3 percentage point separation  
+- Low vs. Very Low: 8.0 percentage point separation
+
+No peptide falls between categories, confirming that the Bayesian framework
+appropriately integrates evidence to produce discrete, interpretable confidence
+levels. This stratification enables risk-based prioritization: high-confidence
+peptides proceed directly to therapeutic consideration, medium-confidence peptides
+warrant experimental validation, and very-low-confidence peptides require
+substantial additional evidence.
+
+**Protein-Specific Evidence Prevents Inappropriate Confidence Transfer**
+
+Our context-aware approach maintains protein-specific evidence tracking,
+preventing the inappropriate confidence inflation observed with sequence-based
+aggregation. Among 94 peptide sequences appearing in multiple proteins, 4 showed
+differential confidence classifications depending on protein context (see earlier
+section on evidence specificity). For example, KVDEJAVL achieves High confidence
+(99.8%) for PABP1/PABP4 where experimental validation exists, but Very Low
+confidence (23.1%) for PABP3 where it lacks validation—demonstrating that our
+framework correctly maintains context-specific evidence profiles rather than
+inappropriately pooling validation across proteins.
+
+================================================================================
+DISCUSSION SECTION
+================================================================================
+
+**Four-Tier Confidence System Balances Precision and Interpretability**
+
+Our Bayesian framework produces a four-tier confidence system (Very Low: 23%,
+Low: 31%, Medium: 64%, High: 99%) with clear, non-overlapping stratification.
+This structure reflects the primary distinction between experimentally validated
+epitopes (High tier, n=159) and computational predictions (Medium/Low/Very Low
+tiers, n=1,295), while maintaining granularity within the predicted category
+based on supporting evidence strength.
+
+**Rationale for Confidence Tier Calibration**
+
+The 35-point separation between High (99.74%) and Medium (64.29%) tiers reflects
+our conservative calibration philosophy: experimental database validation merits
+near-certain confidence, while even the strongest computational predictions
+(intermediate binding + class match) remain substantially below validated
+epitopes. This conservative stance minimizes false positives in the High tier—
+critical for therapeutic applications where validated epitopes represent lower-risk
+targets.
+
+Within the High tier, the narrow range (98.77-99.99%) reflects ceiling effects
+when multiple strong evidence types combine multiplicatively. All peptides with
+experimental validation achieve >98% confidence, appropriately reflecting that
+database validation represents strong evidence regardless of granular quality
+differences (single vs. multiple studies, high vs. medium context relevance).
+These evidence tier distinctions remain valuable for:
+
+1. **Provenance documentation**: Transparent reporting of which studies validate
+   each peptide, supporting reproducibility and quality assessment
+   
+2. **Prioritization when resources are limited**: When selecting among multiple
+   validated peptides (e.g., for vaccine manufacturing), evidence quality grades
+   enable informed prioritization
+   
+3. **Framework extensibility**: As databases evolve to include quantitative
+   immunogenicity data, our tier definitions can be refined without restructuring
+   the framework
+
+**Evidence Integration in the Predicted Category**
+
+Within predicted peptides, our framework creates meaningful stratification
+(23-64%) based on computational predictions and class matching. The Medium tier
+(64.29%) identifies peptides where intermediate binding predictions and HLA class
+concordance partially compensate for lack of experimental validation, creating
+a prioritized list for experimental testing. The Low tier (31.03%) demonstrates
+appropriate penalty application when evidence conflicts (intermediate binding but
+wrong HLA class), while the Very Low tier (23.08%) appropriately assigns low
+confidence to peptides lacking both validation and strong computational support.
+
+This stratification within predicted peptides contrasts with binary approaches
+that would treat all unvalidated candidates equivalently. Our framework enables
+rational resource allocation: experimentally validate Medium-confidence candidates
+first (strong computational support), while Very Low candidates require substantial
+additional evidence to warrant experimental investment.
+
+**Context-Aware Evidence Tracking vs. Sequence-Based Aggregation**
+
+Our protein-specific evidence tracking prevents a critical failure mode of
+sequence-based approaches: inappropriate confidence transfer across protein
+contexts. As demonstrated by differential classification of sequence-identical
+peptides (e.g., KVDEJAVL: 99.8% for PABP1 vs. 23.1% for PABP3), experimental
+validation is protein-specific and non-transferable. This context-awareness
+requires additional preprocessing complexity but prevents systematic overconfidence
+for homologous sequences lacking direct validation.
+
+**Limitations and Future Directions**
+
+Our confidence calibration reflects current database limitations: experimental
+data are largely binary (validated/not validated) rather than quantitative
+(degree of immunogenicity). As databases expand to include T-cell response
+magnitudes, patient outcome data, and negative results, our framework can
+incorporate this information through refined likelihood ratios without structural
+changes. Such refinement would likely create greater separation within the
+current High tier (e.g., distinguishing strongly vs. weakly immunogenic validated
+epitopes) while maintaining the primary validated/predicted distinction.
+
+Additionally, our predicted-only penalty (LR=0.3) represents a conservative
+calibration reflecting high false-positive rates in computational predictions.
+Alternative calibrations (e.g., LR=1.0, neutral) would shift predicted peptides
+toward higher baseline confidence (mean ~50% rather than 23-64%), potentially
+more appropriate for discovery-focused applications prioritizing sensitivity
+over specificity. Our framework supports such recalibration through simple
+parameter adjustment.
+
+**Clinical and Research Implications**
+
+The four-tier system supports differentiated decision-making:
+- **High confidence (99.74%)**: Validated epitopes suitable for immediate
+  therapeutic consideration (vaccine candidates, adoptive T-cell therapy targets)
+- **Medium confidence (64.29%)**: Priority experimental validation targets where
+  computational predictions support but do not replace empirical testing
+- **Low/Very Low confidence**: Lower-priority or experimental artifacts requiring
+  substantial additional evidence
+
+This graduated confidence framework enables appropriate resource allocation while
+maintaining transparency about evidence sources and quality—critical for
+translational applications where both sensitivity (identifying all true epitopes)
+and specificity (avoiding false positives) carry clinical consequences.
+
+================================================================================
+FIGURE LEGENDS
+================================================================================
+
+**Figure X: Four-Tier Bayesian Confidence System with Evidence Integration**
+
+(A) Posterior probability distribution across four confidence tiers showing
+clear, non-overlapping stratification. High confidence peptides (n=159, green)
+achieve 99.74% ± 0.19% based on experimental database validation. Medium
+confidence peptides (n=99, orange) reach 64.29% through strong computational
+support (intermediate binding + HLA Class I match) partially compensating for
+lack of experimental data. Low confidence (n=1, purple) and Very Low confidence
+(n=1,195, pink) peptides lack sufficient supporting evidence. Red arrows indicate
+separation between adjacent tiers (35.5, 33.3, and 8.0 percentage points).
+Dashed line shows prior probability (50%).
+
+(B) Determinants of confidence level classification. High: experimental validation
+with strong supporting evidence. Medium: predicted peptides with intermediate
+binding affinity and HLA Class I matching. Low: predicted with intermediate
+binding but HLA Class II (wrong class penalty). Very Low: predicted without
+strong computational support.
+
+(C) Distribution scatter plot demonstrating no overlap between confidence
+categories. Individual peptides shown as points with jitter for visualization;
+black bars indicate category means. All peptides clearly segregate into discrete
+tiers.
+
+(D) Bayesian evidence integration pathways showing likelihood ratio (LR)
+calculations for each tier. Starting from neutral prior (50%), multiplicative
+combination of evidence types generates posterior probabilities ranging from
+23.08% (Very Low) to 99.99% (High).
+
+================================================================================
+TABLE: Summary Statistics by Confidence Tier
+================================================================================
+
+Confidence | N     | % Total | Mean      | Range            | Has Exp  | Mean LR
+Level      |       |         | Posterior | (Min-Max)        | Data     | Product
+-----------|-------|---------|-----------|------------------|----------|----------
+High       | 159   | 10.9%   | 99.74%    | 98.77-99.99%    | 159      | 5,400
+Medium     | 99    | 6.8%    | 64.29%    | 64.29-64.29%    | 0        | 1.8
+Low        | 1     | 0.07%   | 31.03%    | 31.03-31.03%    | 0        | 0.45
+Very Low   | 1,195 | 82.2%   | 23.08%    | 23.08-23.08%    | 0        | 0.3
+-----------|-------|---------|-----------|------------------|----------|----------
+Total      | 1,454 | 100%    | 34.27%    | 23.08-99.99%    | 159      | Varies
+
+Table Legend: Summary statistics for four-tier confidence system. N: peptide
+count. % Total: percentage of analyzed peptides. Mean Posterior: average
+posterior probability within tier. Range: minimum to maximum posterior probability.
+Has Exp Data: number of peptides with experimental database validation. Mean LR
+Product: average likelihood ratio product (indicates combined evidence strength).
+Clear separation between tiers (no overlap in ranges) demonstrates effective
+Bayesian evidence integration.
+
+================================================================================
+KEY STATISTICS FOR RESULTS TEXT
+================================================================================
+
+Use these numbers in your results section:
+
+1. Total peptides: 1,454
+2. Four confidence tiers with NO OVERLAP
+3. Separations:
+   - High vs Medium: 35.5 percentage points
+   - Medium vs Low: 33.3 percentage points
+   - Low vs Very Low: 8.0 percentage points
+
+4. High confidence (n=159, 10.9%):
+   - Mean: 99.74% ± 0.19%
+   - Range: 98.77-99.99%
+   - All have experimental validation
+
+5. Medium confidence (n=99, 6.8%):
+   - Mean: 64.29% (all identical)
+   - Predicted + intermediate binding + Class I
+
+6. Low confidence (n=1, 0.07%):
+   - Score: 31.03%
+   - Predicted + intermediate binding + Class II (penalty)
+
+7. Very Low confidence (n=1,195, 82.2%):
+   - Mean: 23.08% (all identical)
+   - Predicted only, minimal support
+
+8. Primary distinction: Experimental (10.9%) vs Predicted (89.1%)
+9. Within predicted: 23-64% range based on supporting evidence
+
+================================================================================
+RESPONSES TO POTENTIAL REVIEWER CONCERNS
+================================================================================
+
+**Concern: "Why is there so little variation within Medium and Very Low tiers?"**
+
+Response: "The Medium tier (all 64.29%) represents a specific evidence
+combination (predicted + intermediate binding + Class I match) that occurs
+frequently in our dataset (n=99). These peptides receive identical evidence
+chains, producing identical posteriors—a feature, not a bug. Similarly, Very
+Low peptides lack additional evidence beyond predicted status, producing uniform
+scores (23.08%). This reflects our data structure (categorical database evidence,
+binary binding predictions) rather than model limitations. The High tier shows
+more variation (98.77-99.99%) because experimental studies vary in context
+relevance, though all achieve >98% appropriately reflecting validated status.
+
+As computational predictions incorporate continuous binding scores or affinity
+measurements (rather than categorical strong/intermediate/weak), we expect
+greater within-tier variation. Our framework accommodates such refinement through
+updated likelihood ratios without structural changes."
+
+**Concern: "Isn't this essentially just binary classification (validated vs not)?"**
+
+Response: "While the primary stratification is binary (validated: 99.74% vs
+predicted: 23-64%), our framework adds critical value:
+
+1. Context-aware validation tracking prevents inappropriate evidence transfer
+   across proteins (see KVDEJAVL example: 99.8% for PABP1, 23.1% for PABP3)
+
+2. Within predicted peptides, computational evidence integration creates
+   meaningful stratification (Medium: 64.29% vs Very Low: 23.08%), enabling
+   rational prioritization for experimental validation
+
+3. Transparent provenance tracking documents which studies validate each peptide,
+   supporting reproducibility and quality assessment
+
+4. Extensible framework accommodates future quantitative data through parameter
+   refinement
+
+Binary classification (validated: yes/no) would lose this granularity while
+providing minimal simplification benefit. Our approach maintains clarity about
+primary distinction (validated vs predicted) while preserving evidence quality
+information for informed decision-making."
+
+**Concern: "The High tier range (98.77-99.99%) seems meaningless—all effectively 100%."**
+
+Response: "We agree that for most clinical decisions, peptides scoring 98.77%
+vs 99.99% would be treated equivalently (both merit high confidence). The
+evidence tier distinctions within High confidence serve three purposes:
+
+1. Provenance documentation: Transparently reporting whether validation comes
+   from multiple studies in perfect target context (99.98%) vs single study
+   with partial context match (98.77%)
+
+2. Prioritization under resource constraints: When selecting among 159 validated
+   peptides for limited manufacturing capacity, evidence quality grades inform
+   risk-stratified selection
+
+3. Framework extensibility: As databases incorporate quantitative immunogenicity
+   data, current tier definitions enable refined calibration
+
+We emphasize that the primary clinical distinction is High (99.74% ± 0.19%) vs
+lower tiers, with evidence tiers within High serving documentation and
+prioritization functions rather than changing treatment recommendations. This
+parallels medical evidence grading (Level I/II/III), where all levels support
+treatment but with different evidence robustness."
+
+================================================================================
+END OF NARRATIVE DOCUMENT
+================================================================================

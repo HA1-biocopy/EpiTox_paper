@@ -87,6 +87,12 @@ results <- bayesian_peptide_assessment(
   target_allele = "HLA-A*02:01"
 )
 
+# In R, after loading your results:
+results$confidence_binary <- ifelse(
+  results$evidence == "predicted",
+  "Predicted Only",
+  "Validated (Experimental Data)"
+)
 # Report
 DIR = "/Users/hoor.alhasani/Documents/Projects/D003/Patent_Paper/paper_materials/02_Data_Analysis/data/Bayesian/MAGEA3"
 generate_assessment_report(results,
@@ -98,13 +104,13 @@ cols = c("High" = "#C61E19",
          "Very Low" = "#A2C510")
 # just for the plots
 #results = merge(results, cutoff_4[, c("id", "presentation_score")], by.x = "peptide_id", by.y = "id", all.x = T)
-PieChart(confidence_level, data = results, hole = 0,
+PieChart(confidence_binary, data = results, hole = 0,
          fill = cols,
          color="white",
          main = paste0("Total peptides: ", nrow(results)),
          labels_cex = 0.6)
 
-PieChart(confidence_level, data = results, hole = 0,
+PieChart(confidence_binary, data = results, hole = 0,
          fill = cols,
          color="white",
          labels = "input",
