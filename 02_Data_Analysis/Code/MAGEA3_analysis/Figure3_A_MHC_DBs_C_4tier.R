@@ -41,7 +41,6 @@ df$category %>% table
 counts <- epitox %>%
   count(category) %>%
   mutate(prop = n / sum(n)) %>%
-  #arrange(match(category, c("None", "IEDB", "PEPREP + IEDB", "PEPREP"))) %>%
   mutate(label = paste0(n, " (", round(prop * 100, 1), "%)"),
          ypos = 1- (cumsum(prop) - prop / 2))
 
@@ -72,8 +71,55 @@ g = ggplot(counts, aes(x = 1, y = prop, fill = category)) +
   scale_fill_manual(values = c("#E0E1E1", "#99CFE9", "#2C4255", "#A2C510")) +
   guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 
-ggsave(plot = g, "../../data/Figure3_A.pdf")
-# Plot A
+ggsave(plot = g, "../../data/Figure_3_A.pdf")
+
+# Plot B
+
+df = openxlsx::read.xlsx("../../data/Bayesian/MAGEA3_full_results.xlsx") %>%
+  dplyr::rename(edit_distance = mismatch) %>%
+  mutate(peptide = gsub(".+\\_", "", peptide_id),
+         uniprot = gsub("\\_.+", "", peptide_id)) %>%
+  distinct(peptide, uniprot, .keep_all = T) %>%
+  relocate (uniprot, peptide, .after = "peptide_id") %>%
+  arrange (edit_distance)
+
+plot_summary = df %>%
+  group_by(confidence_level) %>%
+  summarise(Mu = mean(posterior_prob),
+            Counts = n(),
+            Prp = paste0(round(n()/nrow(df), 2)*100, "%")) %>%
+  mutate(confidence_level = factor(confidence_level, levels = c("High", "Medium", "Low", "Very Low")))
+
+g = ggplot(plot_summary, aes(x = confidence_level, y = Mu)) +
+  geom_col(aes(fill = confidence_level)) +
+  geom_text(aes(label = paste("n=", Counts, "\n", Prp)),
+            vjust =0.5,
+            size = 3) +
+  labs(x = "",
+       y = "Mean Posterior Probability (%)",
+       title = "Mean Posterior Probability by Evidence-level") +
+  theme_minimal() +
+  scale_fill_manual(values = c("#00508A", "#B0DAEE", "#DDEFF8", "#F4FAFD")) +
+  theme(legend.position = "none")
+
+ggsave(plot = g, "../../data/Figure_3_C.pdf")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ===================== based on data/full....xlsx table
+
 PieChart(category, data = df,
          hole = 0,
          fill = c("#E0E1E1", "#99CFE9", "#A2C510", "#2C4255"),
@@ -110,9 +156,6 @@ PieChart(Bi_feature_rank, data = df,
 
 library(ggridges)
 
-# Diamonds dataset is provided by R natively
-#head(diamonds)
-
 #
 ggplot(df, aes(x = Bi_features_score, y = anchor_status, fill = anchor_status)) +
   geom_density_ridges(
@@ -129,49 +172,6 @@ ggplot(df, aes(x = Bi_features_score, y = anchor_status, fill = anchor_status)) 
   theme(legend.position = "none")
 
 
-
-cdf_data <- df %>%
-  group_by(Bi_feature_rank, anchor_status) %>%
-  arrange(Bi_features_score) %>%
-  filter(n() >= 5) %>%
-  mutate(
-    cumulative_pct = (row_number() / n()) * 100,
-    Bi_feature_rank = factor(Bi_feature_rank, levels = c("High", "Moderate", "Low"))
-  ) %>%
-  ungroup()
-
-# Figure caption:
-# "Groups with fewer than 5 peptides excluded from visualization"
-g = ggplot(cdf_data, aes(x = Bi_features_score,
-                           y = cumulative_pct,
-                           color = anchor_status)) +
-  geom_line(size = 1.5, alpha = 0.8) +
-  facet_wrap(~Bi_feature_rank, ncol = 3) +
-  scale_color_manual(
-    values = biocopy_colors,
-    name = "Anchor Status"
-  ) +
-  scale_x_continuous(limits = c(0, 1), expand = c(0.01, 0)) +
-  scale_y_continuous(limits = c(0, 100), expand = c(0, 0)) +
-  geom_hline(yintercept = 50, linetype = "dashed", color = "gray60", alpha = 0.7) +
-  geom_hline(yintercept = 90, linetype = "dashed", color = "gray60", alpha = 0.7) +
-  labs(
-    title = "Cumulative Distribution Functions (CDF)",
-    #subtitle = "Bi_features_score by Risk Rank and Anchor Status",
-    x = "Bi_features_score",
-    y = "Cumulative Percentage (%)",
-    caption = "three peptides with mismatch at the anchor positions were removed"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
-    plot.subtitle = element_text(size = 12, hjust = 0.5),
-    axis.title = element_text(size = 12, face = "bold"),
-    strip.text = element_text(size = 11, face = "bold"),
-    legend.position = "bottom",
-    legend.title = element_text(face = "bold"),
-    panel.grid.minor = element_blank()
-  )
 
 
 

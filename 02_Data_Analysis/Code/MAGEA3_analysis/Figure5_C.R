@@ -22,8 +22,8 @@ epitox = openxlsx::read.xlsx("../../data/OT_SCORE_full_annotation.xlsx") %>%
   mutate(Experimental_Evidence = ifelse(Experimental_Evidence == "Medium", "Moderate", Experimental_Evidence),
          genes = sub("\\s.*", "", Gene.Names)) %>%
   filter(Outcome == "Binder") %>%
-  arrange(anchor_status, Wildtype, Bi_feature_rank, Multi_feature_rank,
-          Experimental_Evidence, log2_target_FC)
+  arrange(anchor_status, Wildtype, Bi_feature_rank,
+          Multi_feature_rank, Experimental_Evidence, log2_target_FC)
 
 target = epitox %>%
   filter (id == "P43362_KVAELVHFL")
@@ -45,30 +45,24 @@ top_annotation <- function(gxp = NA,  to_heatmap = NA, scale = F){
     gxp_colSums = colSums(t(to_heatmap), na.rm = T)
   }
   top_ha = HeatmapAnnotation(
+    #Known_MAGEA3 = gxp$known_peptide,
     anchor_status = gxp$anchor_status,
     WT = gxp$Wildtype,
-    #Known_OT = gxp$known_peptide,
     #Mismatch = anno_barplot(gxp$mismatch, gp = gpar(col = "white", fill = "#8ECAE6"), height = unit(1, "cm")),
     #BLOSUM62 = anno_barplot(gxp$blosum_similarity,  gp = gpar( fill = "#EAD7A4"), height = unit(1, "cm")),
-    log2_target_KD_FC = anno_barplot(gxp$log2_target_FC,  gp = gpar( fill = "#8ECAE6"), height = unit(1, "cm")),
-    # Bi_feature_rank = gxp$Bi_feature_rank,
-    # Multi_feature_rank = gxp$Multi_feature_rank,
-    # Experimental_Evidence = gxp$Experimental_Evidence,
+    log2_target_KD_FC = anno_barplot(gxp$log2_target_FC,  gp = gpar( fill = "#6696B9"), height = unit(1.3, "cm")),
     Total = anno_barplot(
       gxp_colSums,
       bar_width = 1, gp = gpar(fill = "#338232", lwd = 0.2, col ="black"),
-      height = unit(1, "cm")
+      height = unit(1.3, "cm")
     ),
     col = list(
-      anchor_status = c("anchor_mismatch" = "#438D99", "Intact" = "#F08000",
-                        "Both Anchor & Backbone" = "#FBB800"),
-      WT = c("No" = "#A2C510", "Yes" = "#F0F0F0")
-      #Known_OT = c("Known" = "#2C4255", "unkwon" = "#EAECEE")
-      # Bi_feature_rank = c("High" = "#00508A", "Moderate" = "#99B9D0", "Low" = "#EAECEE"),
-      # Multi_feature_rank = c("High" = "#00508A", "Moderate" = "#99B9D0", "Low" = "#EAECEE"),
-      # Experimental_Evidence = c("High" = "#00508A", "Moderate" = "#99B9D0", "Very Low" = "#EAECEE")
+      anchor_status = c("anchor_mismatch" = "#F08000", "Intact" = "#438D99",
+                        "Both Anchor & Backbone" = "#EAD7A4"),
+      WT = c("No" = "#2C4255", "Yes" = "#F0F0F0")#,
+      #Known_MAGEA3 = c("Known" = "#958BB2", "unkwon" = "#DCD8E5")
     ),
-    gap = unit(c(1,0,2,2,0,0,2), "mm"),
+    gap = unit(c(1,1,2,2,0,0,2), "mm"),
     border = c(Bi_feature_rank =T, Multi_feature_rank =T, Experimental_Evidence =T)
   )
   return (top_ha)
@@ -110,6 +104,7 @@ tissues_prot = data.frame(tissue = colnames(epitox[16:(ncol(epitox)-1)])) %>%
 
 
 expr_mat = epitox[, 16:(ncol(epitox)-1)]
+# log2( (expr_my_gene + 1) / (expr_target + 1) ) — i.e. log₂ fold change with a +1 pseudocount
 df <- sweep(log2(expr_mat+1), 2, log2(as.numeric(target[2, 16:(ncol(target)-1)])+1), "-") # took the isoform with highest gxp
 mat = as.matrix(df)
 rownames(mat) = paste0(epitox$genes, "_", gsub(".+\\_", "", epitox$id))
@@ -117,7 +112,7 @@ peptides = gsub(".+\\_", "", epitox$id)
 # Define your custom breakpoints for better granularity above zero
 col_prot_fun = colorRamp2(
   c(min(mat, na.rm = TRUE), 0, 1, 2, 4, 6, max(mat, na.rm = TRUE)),
-  c("#2C4255", "#F6F9E7", "#D6E6D6", "#ADCDAD", "#85B484", "#5C9B5B", "#338232")
+  c("#64686A", "#F6F9E7", "#D6E6D6", "#ADCDAD", "#85B484", "#5C9B5B", "#338232")
 )
 prot_top_ha = top_annotation(gxp = epitox, to_heatmap = mat)
 prot_bottom_ha = bottom_annotation(gxp = epitox, to_heatmap = mat)
@@ -152,7 +147,11 @@ hpa_ch_plot = mat %>%
   )
 
 # generate heatmap
-pdf("../../data/Figure_4_C_Binders_GXP_nTPM_tissueSplit.pdf", width = 14, height = 12)
+draw(hpa_ch_plot, column_title = "Confirmed binders according to highSCORE",
+           merge_legend = TRUE, heatmap_legend_side = "bottom",
+           annotation_legend_side = "bottom")
+
+pdf("../../data/Figure_6_C_Binders_GXP_nTPM_tissueSplit.pdf", width = 14, height = 12)
 draw(hpa_ch_plot, column_title = "Confirmed binders according to highSCORE",
      merge_legend = TRUE, heatmap_legend_side = "bottom",
      annotation_legend_side = "bottom")

@@ -4,12 +4,16 @@ library(dplyr)
 
 epitox = openxlsx::read.xlsx("~/Documents/Projects/MAGEA3/results/Cutoff_4/Table/HPA_genes_nTPM.xlsx") %>%
   select(ensembl_gene_id, uniprot, Gene.Names, peptide, blosum_similarity, mismatch,
-         Wildtype, Peptide_HLA_Atlas, affinity, presentation_score, Rank, Ranking_score) %>%
+         Wildtype, Peptide_HLA_Atlas, Peptide_IEDB,
+         affinity, presentation_score, Rank, Ranking_score) %>%
   mutate(id = paste0(uniprot, "_", peptide)) %>%
   distinct(id, .keep_all = T)
 
 
 dups_peptides = epitox$peptide[duplicated(epitox$peptide)]
+dups_peptides_df = epitox %>%
+  filter(peptide %in% dups_peptides)
+
 dups_df = epitox %>%
   filter(peptide %in% dups_peptides, Peptide_IEDB == "Yes") %>%
   mutate(id = paste0(uniprot, "_", peptide)) %>%

@@ -2,6 +2,8 @@ library(ggplot2)
 library(dplyr)
 library(ggpubr)  # for stat_compare_means
 
+results <- read.xlsx("../../data/Bayesian/MAGEA3_full_results.xlsx")
+
 files = list.files(path = "~/Documents/Projects/MAGEA3/results/Cutoff_4/PrediTopes/DB_annotation/",
                    pattern = "*sequence.csv", full.names = T)
 experimental_df = lapply(files, function(f){
@@ -34,9 +36,9 @@ experimental_df = lapply(files, function(f){
            disease == "healthy" ~ TRUE,
            TRUE ~ FALSE
          )) %>%
+  filter(id %in% results$peptide_id) %>%
   relocate(id)
-
-results <- read.xlsx("../../data/Bayesian/MAGEA3_full_results.xlsx")
+openxlsx::write.xlsx(experimental_df, "../../data/experimetnal_data_table.xlsx")
 
 # Calculate counts
 counts <- results %>%
@@ -74,7 +76,8 @@ ggplot(df, aes(x = confidence_label, y = affinity)) +
   theme(legend.position = "none") +
   scale_y_log10()
 
-ggplot(experimental_df %>%
-         filter(), aes(disease, fill = Binding)) +
-  geom_bar(stat = "count", position = "dodge") +
-  coord_flip()
+results <- read.xlsx("../../data/OT_SCORE_full_annotation.xlsx") %>%
+  mutate(confidence_level = factor(confidence_level, levels = c("High", "Medium", "Low", "Very Low")))
+
+
+

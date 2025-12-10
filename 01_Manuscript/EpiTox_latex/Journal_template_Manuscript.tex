@@ -1,0 +1,530 @@
+%%
+%% Copyright 2022 OXFORD UNIVERSITY PRESS
+%%
+%% This file is part of the 'oup-authoring-template Bundle'.
+%% ---------------------------------------------
+%%
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.2 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.2 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%%
+%% The list of all files belonging to the 'oup-authoring-template Bundle' is
+%% given in the file `manifest.txt'.
+%%
+%% Template article for OXFORD UNIVERSITY PRESS's document class `oup-authoring-template'
+%% with bibliographic references
+%%
+
+%%%CONTEMPORARY%%%
+\documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}%
+\usepackage{booktabs}
+\usepackage{multirow}
+%\documentclass[unnumsec,webpdf,contemporary,large,namedate]{oup-authoring-template}% uncomment this line for author year citations and comment the above
+%\documentclass[unnumsec,webpdf,contemporary,medium]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,contemporary,small]{oup-authoring-template}
+
+%%%MODERN%%%
+%\documentclass[unnumsec,webpdf,modern,large]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,modern,large,namedate]{oup-authoring-template}% uncomment this line for author year citations and comment the above
+%\documentclass[unnumsec,webpdf,modern,medium]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,modern,small]{oup-authoring-template}
+
+%%%TRADITIONAL%%%
+%\documentclass[unnumsec,webpdf,traditional,large]{oup-authoring-template}
+%\documentclass[unnumsec,webpdf,traditional,large,namedate]{oup-authoring-template}% uncomment this line for author year citations and comment the above
+%\documentclass[unnumsec,namedate,webpdf,traditional,medium]{oup-authoring-template}
+%\documentclass[namedate,webpdf,traditional,small]{oup-authoring-template}
+
+%\onecolumn % for one column layouts
+
+%\usepackage{showframe}
+
+\graphicspath{{Fig/}}
+
+% line numbers
+%\usepackage[mathlines, switch]{lineno}
+%\usepackage[right]{lineno}
+
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+%%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
+%% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
+\newtheorem{proposition}[theorem]{Proposition}%
+%%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}
+
+\begin{document}
+
+\journaltitle{Journal Title Here}
+\DOI{DOI HERE}
+\copyrightyear{2022}
+\pubyear{2019}
+\access{Advance Access Publication Date: Day Month Year}
+\appnotes{Paper}
+
+\firstpage{1}
+
+%\subtitle{Subject Section}
+
+\title[EpiTox]{EpiTox: A Multi-Modal Framework for Population-Aware Off-Target Prediction Highlighting MAGEA3 Cross-Reactivity}
+
+\author[1,$\ast$]{Hoor Al-Hasani}
+\author[2]{1}
+\author[3]{2}
+\author[3]{3}
+\author[4]{4\ORCID{0000-0000-0000-0000}}
+
+\authormark{Author Name et al.}
+
+\address[1]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+\address[2]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+\address[3]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+\address[4]{\orgdiv{Department}, \orgname{Organization}, \orgaddress{\street{Street}, \postcode{Postcode}, \state{State}, \country{Country}}}
+
+\corresp[$\ast$]{Corresponding author. \href{email:email-id.com}{email-id.com}}
+
+\received{Date}{0}{2025}
+\revised{Date}{0}{Year}
+\accepted{Date}{0}{Year}
+
+%\editor{Associate Editor: Name}
+
+\abstract{Targeting intracellular tumor antigens presented by peptide human leukocyte antigen (pHLA) complexes offers a promising immunotherapeutic strategy for patients with limited treatment options. However, development of pHLA-targeted drugs such as T-cell receptor (TCR) mimic antibodies (TCRm) and other TCR-based therapeutics remains challenging due to severe off-tumor and off-target toxicities arising from incomplete pHLA off-target profiling. The fatal neurological toxicities in the MAGE-A3 TCR-T cell trial, caused by unanticipated cross-reactivity with peptides from EPS82L and MAGEA12, highlight the urgent need for improved safety assessment. Current preclinical de-risking methods rely on peptide-centric similarity searches performed in isolation, failing to capture the complex landscape of peptide cross-reactivity and leaving safety gaps unaddressed.
+To address these limitations, we developed EpiTox, a computational multi-modular platform that systematically identifies and evaluates pHLA off-targets. EpiTox integrates proteome-wide sequence similarity, genetic context, HLA binding profiles, and layered risk assessment to provide a holistic evaluation of potential cross-reactive peptides. Using MAGE-A3 as a model, EpiTox identified known toxic off-targets and predicted novel epitopes. Notably, an anti-MAGE-A3 therapeutic TCRm antibody bound several newly predicted off-targets, confirming the physiological relevance of these predictions.
+By enabling comprehensive and predictive preclinical safety screening, EpiTox supports safer TCRm drug development and may help prevent future clinical failures.
+}
+\keywords{Peptide-centric, Sequence similarity, Bayesian theorem, MAGEA3, HLA}
+
+\maketitle
+
+
+\section{Introduction}
+    % the TCRm motativation
+    The immune system relies on sophisticated surveillance mechanisms to detect intracellular abnormalities that signal infection or malignant transformation. Central to this process is the presentation of intracellular protein fragments on the cell surface by human leukocyte anti-gen (HLA) molecules. Within cells, proteins are continuously degraded into short peptides that are loaded onto HLA molecules and displayed as peptide–HLA (pHLA) complexes. These complexes provide the immune system with a molecular snapshot of the cell’s internal state. When the presented repertoire deviates from normal, such as during viral infection or oncogenic transformation, cytotoxic T lymphocytes (CTLs) recognize these altered pHLA complexes through their T-cell receptors (TCRs), leading to the targeted elimination of affected cells.
+    
+    % the pHLA motivation
+    Because approximately 75\% of human proteins are localized intracellular, including many oncogenic drivers and tumor-associated antigens, the HLA immunopeptidome represents a vast reservoir of potential targets for cancer immunotherapy. Accessing these intracellular epitopes through HLA presentation expands the druggable proteome beyond the reach of small molecules or conventional antibodies, which are typically restricted to extracellular or cell-surface targets. An emerging therapeutic approach that exploits this principle is the development of T-cell receptor mimic antibodies (TCRms). These antibodies share the structural framework of conventional monoclonal antibodies but differ fundamentally in antigen recognition: whereas classical antibodies bind conformational epitopes on native surface proteins, TCRms recognize linear peptide epitopes presented by HLA molecules. HLA Class I molecules primarily pre-sent 8–10 amino acid peptides, most commonly 9-mers, with occasional longer (11–15) peptides that bulge out of the groove. The resulting pHLA complex forms a composite antigen composed of a variable peptide and a largely invariant HLA scaffold. This architecture imposes unique design constraints and introduces a key safety consideration - cross-reactivity. Similar to TCRs, engineered TCRm antibodies can recognize multiple distinct pHLA complexes with similar surface topologies, potentially engaging self-derived peptides and triggering off-target toxicity.
+    
+    % the magea3 mptivation
+    Clinical experience with TCR-based therapies has highlighted this risk. Several trials were halted due to fatal off-target effects, most notably MAGE-A3-specific TCRs that cross-reacted with a Titin-derived HLA-A*01-restricted peptide (ESDPIVAQY), resulting in lethal cardio-toxicity, or with EPS8L2 and MAGE-A12-derived peptides (SAAELVHFL and KMAELVHFL respectively) \cite{morgan2013cancer, martin2021re}, leading to fatal neuro-toxicity. Although such events have not yet been reported for TCRms, the underlying molecular challenge of cross-reactivity is shared between both modalities, underscoring the need for robust preclinical safety assessment.
+
+    % =============================================================
+    iiA major challenge in developing safe and effective TCR and TCRm therapeutics lies in the pro-spective identification of off-tumor, off-target pHLA complexes. Existing preclinical assays, such as alanine or X-scanning mutagenesis, can reveal critical peptide residues and guide pro-teome-wide similarity searches but cannot directly pinpoint specific off-targets. 
+    Over the past decade, several computational tools have been developed to predict TCR cross-reactivity based on sequence or biochemical similarity. Sequence-based methods, including Expitope and iCrossR, rely on peptide identity and HLA-binding predictions to identify related epitopes, whereas biochemical-similarity frameworks such as dGraph and sCRAP leverage physico-chemical descriptors to detect structurally related peptides. These predictions can be refined using biological context, such as mRNA expression, HLA presentation, and peptide processing data, but often lack comprehensive integration. Structure-based approaches attempt to in-corporate three-dimensional TCR–pHLA interaction data, yet their utility remains constrained by limited structural information and the high computational cost of proteome-scale model-ing.eTo overcome some of these limitations, CrossDome was introduced as a next-generation framework for predicting T-cell cross-reactivity and off-target toxicity. 
+    Unlike traditional se-quence-based tools, CrossDome leverages experimentally derived immunopeptidomics data from healthy tissues, thereby reducing reliance on in silico peptide predictions. It integrates peptide biochemical properties, structural features, and functional annotations including tissue expression, HLA restriction, and immunogenicity to identify biochemically similar tar-gets independent of strict sequence identity thresholds. This integrative approach enables systematic prioritization of candidate off-targets for experimental validation within TCR dis-covery pipelines. However, CrossDome is optimized for annotating known off-targets and peptides rather than discovering novel ones, as its search space is constrained to the experi-mental dataset, i.e., a fixed predefined pool of candidates. Despite these advances, current prediction frameworks still exhibit key limitations. 
+    Most state-of-the-art tools fail to account for population-specific genetic variation (e.g., sCRAP, CrossDome), while those that do either focus on disease-associated mutations or only in-clude common SNPs (e.g., ARDiTox). Others impose restrictive similarity thresholds (e.g., ARDiTox requires $\geq5$ shared amino acids), limited search spaces (e.g., CrossDome includes only experimentally validated peptides), or fixed peptide lengths (e.g., restriction to 9-mers). Additionally, some tools operate within constrained peptide pools derived from proprietary or pre-validated datasets, which enhances known off-target ranking but limits the discovery of novel cross-reactivities. 
+    Consequently, a comprehensive, proteome-wide interrogation of potential off-target pHLA complexes remains elusive.eTo address these challenges, we developed EpiTox (Epitope Toxicity), a multimodal computa-tional platform for systematic off-target assessment in TCR and particularly TCRm develop-ment. 
+    EpiTox integrates multiple layers of biological and computational information, includ-ing peptide sequence similarity with customizable thresholds, biophysical descriptors, pre-dicted HLA processing and binding, experimental evidence, and tissue-specific expression, to generate ranked lists of physiologically relevant candidate off-targets.eThe framework broadens the search space by incorporating population-specific single-nucleotide polymorphisms (SNPs), non-human viral peptides, and patent-derived sequenc-es, ensuring comprehensive proteomic coverage. Each identified peptide is automatically annotated with gene identity, tissue expression, HLA affinity, and experimental validation status, including available mass spectrometric (MS) evidence.nTo 
+
+    % =============================================================
+    
+    % computations challenge
+    %Despite advances in peptide-HLA binding prediction, systematic identification of physiologically relevant off-targets remains computationally challenging. First, the sequence similarity search space is vast: even restricting to 9-mer peptides, the human proteome contains millions of potential epitopes, requiring efficient search strategies that balance sensitivity and specificity. Second, population-specific genetic variation creates patient-specific off-target landscapes, but systematic integration of SNPs leads to combinatorial explosion without intelligent filtering. Third, experimental evidence for peptide-HLA interactions exists in fragmented form across multiple databases with varying levels of reliability, lacking a principled framework for quantitative integration. Fourth, off-target risk is multi-dimensional: sequence similarity indicates evolutionary relatedness, binding affinity determines presentation likelihood, and biophysical properties affect TCR recognition. These dimensions are poorly correlated, yet most tools attempt to reduce risk to a single score, potentially missing important off-target categories.
+    
+    % existing solutions
+    %Existing computational tools address subsets of these challenges but lack comprehensive integration. Sequence-based tools like Expitope [CITE] and iCrossR [CITE] rely on amino acid identity and HLA binding predictions but ignore population variation and biophysical properties. Biochemical similarity frameworks such as dGraph [CITE] and sCRAP [CITE] leverage physicochemical descriptors but lack systematic evidence integration. CrossDome [CITE] represents a significant advance through integration of experimental immunopeptidomics data, but its search space is limited to pre-validated peptides, constraining discovery of novel off-targets. ARDiTox [CITE] incorporates some SNPs but requires high sequence similarity ($\geq$5 identical amino acids) and while the approach is described conceptually, no methodological validation or assessment of its impact on the final outcome has been reported. 
+    %No existing tool systematically addresses all four computational challenges in an integrated framework.
+
+    % Our solution: EpiTox
+    %To address these computational and biological challenges, we developed EpiTox, a multi-modal platform that integrates sequence-based, structure-informed, and evidence-based methods to systematically identify and prioritize pHLA off-targets.
+    %EpiTox introduces several computational advances: (1) a Bayesian framework for integrating heterogeneous experimental evidence, (2) anchor-aware biophysical scoring that weights features by functional relevance, (3) systematic population-specific variant integration, and (4) multi-modal ranking that captures complementary risk dimensions. 
+    %We applied EpiTox to MAGE-A3, a therapeutic target associated with fatal neurotoxicity in clinical trials, to demonstrate its capability to identify both known toxic off-targets and predict novel cross-reactive peptides. Using high-throughput TCRm binding assays, we experimentally validated 538 predicted peptides, representing one of the largest systematic validation efforts for off-target prediction to date. Our results demonstrate EpiTox’s ability to recover previously reported off-targets and identify 11 novel off-targets that, to our knowledge, have not been described in the literature.
+    
+\section{Methods}\label{methods}   
+    \subsection{Data sources and acquisition}
+        EpiTox integrates multiple public databases at different points into its different pipelines (supplementary Table 1). The latest access of all data sets is 2025 and first filtered according to their compatibility with each other. Key parameters for each data set are provided in (supplementary table 1). Protein sequences were fully mapped between different databases via uniprot id and ensembl id, uniprot isoforms id and ensembl transcript ids. Unmapped sequences were excluded from the downstream analysis. Data processing and analysis employed both established bioinformatics tools, modules and packages, and custom built modules for EpiTox (supplementary Table 2). Key/default parameters for each analytical step are provided where applicable. 
+        
+    \subsection{\textbf{PEPREP: in-house database for pHLA annotations}} \label{sec:peprep}  
+        Along with public resources, EpiTox uses in-house established resource for experimentally validated pHLA complexes, peptides repertoire (PEPREP). PEPREP aggregates and harmonizes public and propriety data to provide different information for each pHLA, for example HLA-allele, disease, tissue, etc.
+
+    \subsection{\textbf{Known peptides in MAGEA3 context}} \label{sec:known_OT}  
+        Three studies and one patent were used to create a list of 18 peptides that was labeled as the disclosed or known off-target set for MAGEA3 case (supplementary table 3) \cite{WO2021173674A1, chinnasamy2011tcr, morgan2013cancer, dhanik2016silico}. 
+
+    \subsection{\textbf{EpiTox architecture}} \label{sec:epitox_archticture}  
+        EpiTox workflow-kit consists of multiple individual workflows implemented with Snakemake \cite{molder2025sustainable}, each designed to perform specific tasks. The module's name reflects what the main task or the dominant task of the module. The different modules serve two functions, off-targets identification and peptides annotation. The core was implemented using BioCopy's high throughput clustering system on Linux platform with slurm as resources management \cite{simakov2018slurm}.
+    
+    \subsection{\textbf{FindTopes: off-targets identification module}}\label{sec:findtopes}
+        FindTopes finds peptides that share sequence similarity with the target sequence. The similarity threshold is by default 40\%, meaning that all found peptides will share at least that level of sequence similarity with the target. We used mismatch cutoff = 4, length cutoff = 9, so that all off-targets are of the same length as the target, and finally only peptides without gaps were included in the downstream analysis.
+        The peptide list generated in this module has the complete mapping of genomic and proteomic location coordinates.
+
+    \subsection{\textbf{MutaTopes: SNPs integration}}\label{sec:mutatopes}
+        SNPs were first filtered by European population according to gnomAD's annotations (FIN + NFE)\footnote{\url{https://gnomad.broadinstitute.org/news/2017-02-the-genome-aggregation-database/}}. Using the genomic coordinates that were extracted in FindTopes, SNPs that were reported in these regions are extracted \cite{danecek2021twelve} and annotated \cite{hunt2022annotating}. After the SNPs were filtered according to the chosen population, the were additionally filtered by quality and allele frequency (default $ \geq 1\%$). SNPs are then integrated into the peptides using in-house developed tools resulting in increasing the final peptides list. Finally, the edit distance of the newly added peptides is calculated, keeping only those $<5$. 
+
+        \subsubsection{\textbf{Peptide positional analysis}}\label{sec:xscan}  
+            For target peptide T (length L), all single-residue substitutions \(L\times 19\).were generated, and predicted HLA binding affinities were obtained with NetMHCpan \cite{reynisson2020netmhcpan}. 
+        
+            For position $l$, then mean value across substitutions $Pos_{KD_{l}}$ was used to derive three complementary metrics:
+            \begin{equation}
+                FC\_mean_l = \frac{Pos_{KD^{X}_{l}}}{KD^{T}}\label{fc_mean}
+            \end{equation}
+            \begin{equation}
+                Sensitivity\_score_l = \frac{max(Pos_{KD^{X}_{l}}) - min(Pos_{KD^{X}_{l}})}{KD^{T}}\label{sens}
+            \end{equation}
+            \begin{equation}
+                Percent\_Better\_than\_T_l = \frac{\#(Pos_{KD^{X}_{l}} \leq KD^{T})}{n \times 100} 
+                \label{better_wt}
+            \end{equation}
+        $\quad \text{where } n = \#\{ KD^{X}_{l} \text{ is valid (non-NA)} \}$ 
+        Positions withing upper 30\% for both $FC_{mean}$ and Sensitivity were termed anchors, those within upper 30\% for Percent\_Better\_than\_T permissive, and others neutral.
+        The substitution matrix provides transparent, model-derived positional template used only to describe mismatch patterns between the target peptide and off-target sequences sharing local similarity. It is treated as a relative, NetMHCpan-based sensitivity profile rather than an experimental binding map.
+        The same framework can, in principle, be applied to any HLA allele for which predictive or experimental binding data exist (e.g., NetMHCpan or MS ligandomics), although for rare alleles such results should be interpreted qualitatively
+        
+        \subsubsection{Off-Target dissimilarity analysis}\label{sec:dissimilarity}
+            Off-target peptides were classified using target as a sequence template based on position-specific binding template established earlier (\ref{sec:xscan}). Each off-target peptide was analyzed by projecting its mismatches onto the template’s positional classes. The peptides are then binned into, \textbf{anchor only/mismatch}: One or more mismatches at anchor positions, potentially altering peptide-MHC complex structure. \textbf{Backbone-only/intact}: Anchor positions conserved but exposed positions differ, maintaining presentation but potentially avoiding antibody recognition. \textbf{Both}: at least one anchor and one backbone position.
+
+        At this point, the identified off-targets peptides have these characteristic information: Sequence, gene-protein mapping, transcript-isoform mapping, edit distance, target mismatch profile, wildtype/mutated annotation, and the position on the protein. The size of the list will not change after this module. 
+        
+    \subsection{\textbf{PrediTopes: HLA binding prediction and experimental evidence}}\label{sec:preditipes}
+        Affinity and presentation score are predicted using NetMHCpan. Peptides experimental annotations were then fetched from IEDB \cite{vita2019immune} and PEPREP (supplementary table 3). 
+        %The predicted affinity was used to classify the off targets.
+        %\subsubsection{Bayesian Assessment of Experimental Evidence}
+        %    To systematically evaluate the experimental evidence supporting each predicted pHLA interaction, we developed a Bayesian probabilistic framework that quantifies confidence based on cumulative strength and contextual relevance of available data.  
+        \subsubsection{Data preparation} \label{sec:bayes_data}
+            Experimental data were aggregated for each protein-peptide pair (uniprot ID – peptide sequence), preserving allele-binding relationships and associated metadata including tissue/disease context, binding affinity measurements, and study quality indicators. This protein-specific aggregation ensures that evidence assessments reflect the exact biological context of each peptide-source. 
+            
+        \subsubsection{Likelihood ratios logic} \label{sec:bayes_LR}
+            Likelihood ratios (LR) were assigned based on the strength and reliability of each evidence type, reflecting the hierarchical quality of different data sources. High-confidence experimental evidence (e.g., direct binding assays for the target allele in normal tissue context) received the highest LRs (8-12), followed by medium-quality evidence with partial context matching (LR 4-6), low-quality or indirect evidence (LR 2-3), and no experimental evidence (LR 0.3). Additional modifiers were applied for HLA allele specificity (LR 0.5-10), and binding affinity (LR 1-5 with target-HLA allele-specific multipliers of 0.2-2.5). This weighting scheme prioritizes direct experimental validation for the specific allele in healthy tissue as most informative, followed by computational predictions and cross-reactive or non-specific evidence. Complete LR specifications are provided in supplementary table S4.
+    \begin{table*}[!htbp]
+        \centering
+        \caption{Decision matrix for experimental design\label{tab:decisionmatrix}}
+        \begin{tabular}{@{}lll@{}}
+            \toprule
+            Goal & Approach & Rationale \\
+            \midrule
+            Known risk only & Bayesian evidence + one ranking score & Prioritizing empirical knowledge  \\
+            Pragmatic       & Bi-feature score                      & Intuitive + good sensitivity \\
+            Mechanistic characterization    & Multi-feature score   & Feature contribution \\
+            Novel peptides only & Bi-feature + multi-feature        & Comprehensive prediction \\
+            High-confidence set & Consensus (2+ scores)             & Multiple orthogonal information \\
+            \botrule
+        \end{tabular}
+    \end{table*}
+    
+    \subsection{AnnoTopes: off-targets annotation and ranking}\label{sec:annotopes}
+        \subsubsection{\textbf{Bi-feature score}}\label{sec:annotopes_bi}
+        The score prioritizes off-targets based on similarity to the target, using BLOSUM62 substitution matrix ($b$), and its affinity to HLA-allele ($a$). The score is bounded [0-1], the higher the score is, the higher the risk is, i.e., highly ranked peptides are more likely to be relevant off-targets and therefore should be included in downstream analysis. 
+        The score function ($S$) is defined as:
+        \begin{equation}
+            S(a,b)=  \frac{f(a)+g(b)}{2}
+        \end{equation}
+
+        where affinity is defined as \\
+        $f(a)= \{1,0.66,0.33,0\}$ to maintain biological relevance  \\
+        $a \in \{[0,50),[50,500),[500,5000),[5000,\infty)\}$ \\
+        and
+        \begin{equation}
+            g(b)=  \frac{b- b_{min}}{(b_{max}-b_{min})} 
+        \end{equation}
+
+        The final peptide classification is then estimated using supervised machine learning method, k-means with 3 clusters (EpiTox’s default clustering mode): $peptide_{rank}= kmeans_3(S) \rightarrow\{Low,Moderate,High\}$
+        
+        \subsubsection{\textbf{Multi-feature score}}\label{sec:annotopes_multi}
+        Eight biophysical properties for each peptide were calculated: Five global features (GRAVY, isoelectric point [pI], net charge at pH 7.4, aromaticity, and aliphatic index) and three position-specific features corresponding to TCR-facing backbone residues (backbone GRAVY, backbone charge, and backbone aromaticity) at previously defined positions according to target-template (see methods \ref{sec:xscan}). The choice of features was guided by observations from internal analyses on related datasets, where these properties appeared to show meaningful variability and potential relevance to pHLA and structural characteristics.
+        All features were computed and z-score normalized. The anchor \& backbone positions of the target were determined in the X-Scan module, and the associated off-target positions classification was determined after obtaining the final list from MutaTopes.
+        The features were weighted based on the location of the mismatch to HLA anchors, these weights within each category were normalized to sum to 1. When anchors are intact, HLA presentation is maintained and TCR recognition of exposed backbone residues dominates; when anchors are disrupted, global properties affecting presentation become more relevant. Therefore, the weights are Anchor intact (backbone mismatches only): Backbone features weighted $3.0\times$, global features $1.0\times$; Anchor mismatch (backbone intact): Global features weighted $2.0\times$, backbone features $1.0\times$; Both (mismatches everywhere): Global features $1.0\times$, backbone features $1.5\times$
+        Multi-biophysical distance from the target peptide was computed as weighted Euclidean distance:
+        \begin{equation}
+            d = \sqrt{\sum w_i (x_i - x^T_i)^2}
+        \end{equation}
+        
+        where $x_i$ and $x^T_i$ are normalized feature values for off-target and target peptides, and $w_i$ is the conditional weight for feature $i$. Peptides were ranked by ascending distance (rank 1 = most similar).
+
+        \subsubsection{Disagreement Analysis}\label{sec:disagreement}
+        The ranks produced by the two scoring approaches were compared to assess their concordance. This analysis identified which biophysical features contributed most to divergence from the bi-feature ranking. Rank-based correlation was used to quantify agreement, evaluate the extent of disagreement, and highlight peptides falling within the disagreement range.
+
+    \subsection{ViralTopes: off-targets identification in pathogens module}\label{sec:viraltopes}
+        The module focuses on non-human genomes by identifying off-targets in human hosted species, e.g., HIV.  The off-targets identification process follows the same approach used in FindTopes \ref{sec:findtopes} and applying the same cutoffs and criteria (length, edit distance, etc.). The current version of EpiTox offers these results as optional metric with the potential of adding more comprehensive analysis when it is needed.
+    
+    \subsection{Candidate Selection: Experimental design}\label{sec:decisionmatrix}
+        To accommodate the inherent complexity in predicting potential off-target peptides, we provide multiple scoring strategies rather than relying on a single metric. The choice of approach should be guided by the experimental goal, as summarized in Table~\ref{tab:decisionmatrix}.
+    
+    \subsection{Peptide–HLA array production and SCORE measurements}\label{sec:highscore}
+        Peptide–HLA array production and SCORE measurements were performed essentially as described previously \cite{kramer2023ultra}. Peptides were purchased from Peptides \& Elephants GmbH (Hennigsdorf, Germany), and biotinylated, stabilized HLA-A*02:01 variant was used \cite{saini2019empty}. The antibody was measured in its fab format to avoid avidity effects. The binding curves were fitted and analyzed using an internal version of anabel and a 1:1 Langmuir binding model \cite{kramer2019anabel}.
+
+\section{Results}\label{rslts}
+
+    \begin{figure*}[!htbp]%
+            \centering
+            \includegraphics[width=1\linewidth]{Figures/figure_1.png}
+            \caption{\label{fig:fig1}EpiTox integrates six computational modules for comprehensive off-target risk assessment. FindTopes or ViralTopes) perform dual-algorithm sequence similarity search with dissimilarity penalty in human genome or in non-human genomes. MutaTopes) integrates population-specific variant and generate SNPs-derived peptides. PrediTopes) uses NetMHCpan to predict affinity and presentation. The module provides peptide contextual assessment using Bayesian analysis by leveraging public and propriety experimental data (PEPREP \& IEDB). AnnoTopes) Off-target candidates are classified with two different ranking scores, Bi-feature score incorporates sequence similarity and binding affinity to the HLA-allele. Multi-feature score integrates eight global and local physio-chemical features while applying target-template.}
+    \end{figure*}
+
+    Systematic off-target peptides assessment requires integrating multiple computational strategies, each addressing a different aspect of cross-reactivity risk. We designed EpiTox as a modular platform consisting of six interconnected modules, each tackling a specific computational challenge (Figure~\ref{fig:fig1}). 
+    EpiTox integrates six modules: X-Scan performs a systematic target-HLA binding motif analysis through single-residue substitution to identify critical positions and potential antibody-exposed residues; FindTopes applies dual-algorithm search for peptides in human proteome sequences with user defined dissimilarity penalty; ViralTopes screens pathogen proteomes; MutaTopes incorporates population-specific variants then classifies off-target candidates by their mismatches pattern using target position-binding profile as a template; PrediTopes focuses on HLA binding prediction then leverages pre-reported experimental data through Bayesian probability framework to employ the experimental knowledge and finally, AnnoTopes provides multi-modal risk scoring to proceed with off-target validation. We demonstrate EpiTox’s capabilities through experimental validation using our in-house technology (highSCORE) and systematic benchmarking while highlighting MAGEA3 as use case. 
+      
+    \subsection{\textbf{FindTopes: Sequence-based off-Target candidates identification}}
+        Identifying off-target candidates requires balancing sensitivity and specificity in similarity searches. FindTopes employs a dual-method approach: BLASTp with both substitution matrices (BLOSUM62, PAM30) captures biologically relevant relationships through evolutionary-informed scoring and gapped alignments \cite{mahram2015ncbi}, while PepMatch provides orthogonal k-mer based exact matching \cite{marrama2023pepmatch}. This combination integrates alignment-based detection of functional similarity with deterministic pattern matching, capturing both conservative substitutions that may preserve cross-reactivity and exact local matches. Using sequence-based searches at this early stage enables broad identification of potential off-target peptides including novel or uncharacterized ones prior to further characterization, thereby expanding the search space for subsequent physicochemical and contextual analyses.
+        
+        \subsubsection{\textbf{MAGEA3: Off-targets prediction}}
+        We then predicted off-targets with an edit distance $<5$ from the target (see methods: FindTopes). The analysis identified 1454 putative off-targets for MAGEA3-KVAELVHFL \ref{fig:fig2}.
+        According to the classification we obtained from the target (Table~ \ref{tab:xscan}), around 19\% of off-targets have sequence mismatches within the backbone positions only (Figure~\ref{fig:fig2}.B), indicating that their anchor positions remained intact and therefore, pHLA complex is likely to form. Furthermore almost 81\% of the predicted off-targets have their sequence variation both in anchor and permissive positions, making the safety assessment in needs for further and in-depth inevitable. Only three peptides have mismatches exactly at the anchor positions, MAGEA12-KMAELVHFL with one mismatch at P2, EPS8L2-SAAELVHFL with two mismatches at P1 \& P2 and PPP2R1B-GIAELVHFS with three mismatches at all classified positions P1, P2 \& P9.
+        
+        Interestingly, in total six predicted off-target have exactly one mismatch to the target, of which only one had its mismatch at the anchor position, a known off-target the MAGEA12-KMAELVHFL \cite{martin2021re, morgan2013cancer}, the rest five had their single mismatch in the backbone only. Following on, EpiTox identified 18/19 peptides that were previously disclosed in patents and studies (Figure~\ref{fig:fig2}.C, supplementary table 3). The missing off-target was MAGEA5-KVADLIHFL due to quality controls we applied during data aggregation. We also retrieved MAGEA9 as a perfect match to the target. Several of the top peptides with the lowest edit distance were, as expected, from the MAGE family.
+        
+        \begin{figure*}[!htbp]%
+            \centering
+            \includegraphics[width=0.7\linewidth]{Figures/figure_2.png}
+            \caption{\label{fig:fig2} Selected output from EpiTox using MAGEA3-KVAELVHFL. A) bar chart of identified peptides in human proteome distributed according to their edit distance to the target. The plot shows two categories, the wildtype peptides and the SNPs-derived peptides. (B) position mismatch classification of the predicted peptides according to the target binding profile (C) number of disclosed peptides in previous patents and studies that were identified by EpiTox, only one peptide was missed by EpiTox due to quality checks during data aggregation. (D) peptides are categorized by their binding affinity to HLA-A*02:01 according to NetMHCpan; ~50\% of the peptide have moderate to high binding affinity.}
+        \end{figure*}
+        
+    \subsection{\textbf{MutaTopes: Integration of population-specific SNPs}}
+        Single nucleotide polymorphisms (SNPs) can create or eliminate off-target peptides in specific populations, yet systematic integration is computationally prohibitive. The human genome contains $~650$ million SNPs (gnomAD \cite{chen2024genomic}), and each protein-coding SNP potentially generates multiple altered peptides depending on its position within potential epitope windows. Combinatorial enumeration would generate billions of theoretical variants, the vast majority functionally irrelevant.
+        
+        We developed a coordinate-based mapping strategy that dramatically reduces the search space while ensuring comprehensive coverage. First, FindTopes identifies all potential off-target peptides and extracts their genomic coordinates. Second, MutaTopes intersects these coordinates with population-specific SNP databases, transforms them to the protein level, and retains overlapping isoform-peptide windows. Third, variant peptides are generated and assessed using edit distance cutoffs, with duplicate sequences removed. This targeted approach focuses computational resources exclusively on SNPs that produce distinct sequence variants, eliminating redundant combinations where multiple SNPs yield identical peptide sequences. By filtering out this redundancy, the method reduces billions of theoretical SNP combinations to tractable experimental sets while preserving all unique population-relevant variants. 
+
+        \subsubsection{\textbf{MAGEA3: SNP-derived peptides identification}}
+            The identified off-targets comprised 1,304 wild-type sequences and 150 SNP-derived sequences (Figure~\ref{fig:fig2}A). Among these, five contained irregular symbols resulting from stop codon annotations at the protein level. One SNP-derived peptide exhibited two mismatches, seven exhibited three mismatches, and the remaining 142 exhibited four mismatches. In total, 25 SNP-derived peptides retained intact anchor positions. 
+            
+    \subsection{\textbf{X-Scan: Position-specific analysis}}
+        We adapted the concept of substitution matrix, that is widely used in literature \cite{reynisson2020netmhcpan, xia2023computational} to create a target-based template for binding profile (see methods \ref{sec:xscan}). 
+        The substitution-based approach provides an empirical, model-agnostic quantification of positional sensitivity that remains valid regardless of allele rarity or motif uncertainty. Three complementary metrics contribute to the position classification: FC\_mean, sensitivity and \% better than WT/target. The position is classified as classical anchor positions if it satisfies the metrics FC\_mean and sensitivity. Position is permissive if the \% better than target is true. The position is flexible if the position met the criteria of both classical and permissive. Finally, neutral positions are none of the above.  
+        
+        \subsubsection{\textbf{MAGEA3: Position-specific analysis asserts binding residues landscape}}
+        We performed HLA-A*02:01 binding profile characterization of the target peptide (KVAELVHFL) to identify positions critical for presentation and assess their tolerance for sequence alteration/variation (see methods: X-Scan \ref{sec:xscan}). The analysis of 171 generated peptides confirmed positions P2 and P9 as classical anchor positions (Table ~\ref{tab:xscan}, Supplementary Figure 1), consistent with the established HLA-A*02:01 binding motif \cite{hutchison2018identifying}, and P1 as a third possible anchor position, with $>80\%$ of substitutions at these positions resulting in weakened binding (mean fold-change $>5.96$). Sequence variation or mutations at anchor positions are known to alter peptide backbone conformation within the MHC groove \cite{theodossis2010constraints,cole2010modification}, potentially disrupting both MHC presentation and consequently antibody recognition. Therefore, off-targets with maintained anchor positions are more likely to adopt similar backbone conformations and warrant further investigation for cross-reactivity assessment, even though sequence differences in backbone positions, may ultimately prevent antibody recognition.  
+        In contrast, positions P3 \& P5 were classified as permissive, with 60-70\% of amino acids substitution and maintained the binding affinity within 2-fold of wildtype. These permissive positions not only tolerate diverse amino acids without disrupting MHC presentation, but they are indicative of, when mutated/varied are less likely to alter the overall pHLA complex structure. However, positions forming the backbone are surface-exposed ones and may serve as antibody epitope, therefore, off-targets with sequence variation at permissive positions may still require experimental validation for cross-reactivity assessment.  
+
+        \begin{table}[!htbp]
+        \centering
+        \begin{minipage}{0.7\textwidth}
+            \caption{Position-specific HLA-binding of MAGEA3\label{tab:xscan}}%
+            \begin{tabular}{@{}llllll@{}}
+                \toprule
+                Position & AA & Class & FC\_mean & Sensitivity & \% Better \\
+                 &  &  &  &  & than target \\
+                \midrule
+                P1 & K & Classical & 5.96 & 39 & 15.79 \\
+                P2 & V & Classical & 24.41 & 108.67 & 15.79 \\
+                P3 & A & Permissive & 1.63 & 3.9 & 31.58 \\
+                P4 & E & Neutral & 1.91 & 2.8 & 5.26 \\
+                P5 & L & Permissive & 1.12 & 0.6 & 31.58 \\
+                P6 & V & Neutral & 1.43 & 1.46 & 15.79 \\
+                P7 & H & Neutral & 1.62 & 2.65 & 0 \\
+                P8 & F & Neutral & 1.5 & 1.8 & 5.27 \\
+                P9 & L & Classical & 305.99 & 1135.26 & 10.53 \\
+                \botrule
+            \end{tabular}
+            \begin{tablenotes}
+                \item AA: Target sequence amino acid wise. 
+                \item FC\_mean: mean fold change in KD upon substitution.
+                \item Sensitivity: normalized range of KD change.
+                \item \% Better than WT: percentage of substitutions with better KD than target.
+            \end{tablenotes}
+        \end{minipage}
+        \end{table}
+
+    \subsection{\textbf{PrediTopes: Bayesian framework for leveraging peptides contextual-risk}}
+        A critical challenge in immunogenicity prediction is that peptides often bind promiscuously across HLA alleles, and experimental evidence is highly context-dependent (disease-specific). Traditional binary classification (present/absent in databases) cannot appropriately weight conflicting or partial evidence.
+        We developed a Bayesian inference approach (see Methods: PrediTopes) that naturally accommodates probabilistic evidence integration. This framework quantifies confidence in each peptide-allele interaction by multiplicatively updating beliefs with likelihood ratios from multiple independent sources. For novel peptides lacking experimental evidence, we assigned a prior of 0.5, ensuring safety evaluation eligibility. This conservative stance prioritizes patient safety while explicitly representing uncertainty—a critical advantage over binary approaches that would arbitrarily exclude or include such candidates.
+        
+        The posterior odds for each pair were calculated as 
+        \begin{equation}
+            Posterior\_odds= prior\_odds \times \sqcap_i LR_i
+        \end{equation}
+        Where $Prior\_odds=P(H)/P(\neg H) =0.5/0.5=1$, and $LR_i$ represents the likelihood ratio for evidence type $i$. The posterior probability was then derived as:
+        \begin{equation}
+            P(H|E)=\frac{Posterior\_odds}{1+Posterior\_odds}
+        \end{equation}
+        Protein-peptide pairs were classified into four evidence groups based on the probabilities: High ($\leq$ 80\%), medium (50-79\%), low (30-49\%), and very low ($\leq$ 30\%)  
+        
+        \subsubsection{\textbf{MAGEA3: pHLA prediction}}
+            The binding metrics to HLA were then predicted for every peptide in the list (Figure~\ref{fig:fig2}.D). Accordingly, 277 peptides were highly binders (mean KD = 28.3 nM), 444 medium binders (mean KD = 179 nM), low binders (mean KD = 1999 nM), and 373 random binders (mean KD = 14960 nM). As expected, the predicted affinity exposed the largest variation in peptides with mismatches at both anchor positions and backbone. Interestingly, the three peptides with mismatches at anchor positions showed also different binding, while MAGEA12-KMAELVHFL and EPS8L2-SAAELVHFL both showed high affinity (KD = 10.8, 29.5 nM respectively) showing a similar level to those who have intact anchor positions; on the other hand, PPP2R1B-GIAELVHFS was predicted to have moderate affinity (KD = 1313.3nM) suggesting that the binding to HLA was compromised due to the mismatch at all classified anchor positions.
+
+        
+        \subsubsection{\textbf{MAGEA3: Evidence stratification reflects data reality}}
+
+        Our model classified 159 peptides (11\%) as high evidence (mean = 99.7\%, SD = 0.19), 99 peptides (7\%) as medium evidence (64.3), 1 peptide ($< 1\%$) as low (31.0\%), and 1195 (82\%) as very low evidence (23.1\%) (Figure~\ref{fig:fig3}.B). These posterior probabilities reflect the multiplicative integration of evidence across allele specificity, binding affinity, tissue context, and study quality (see methods, PrediTopes \ref{sec:preditipes}). 
+   
+        \textbf{Protein-context specificity in evidence assessment}
+        Peptide-centric approaches, such as MHC and T-cell epitope predictors (e.g., MHCflurry, NetMHCpan, MixMHCpred), typically consider each peptide sequence as an independent entity, aggregating experimental evidence solely by sequence identity. This framework, while widely adopted \cite{gfeller2023contemplating, reynisson2020netmhcpan}, may overlook potential differences arising from distinct protein contexts. To evaluate the impact of this assumption, we examined 94 peptide sequences that appeared in multiple proteins within our dataset. Most sequence-identical peptides (84/94, 89\%) lacked experimental validation for any protein source. Among the 10 with available data, four exhibited differing confidence classifications depending on the associated protein (Supplementary Table 4).
+        For example, KVDEAVAVL received High evidence for PABP1/PABP4 but Very Low for PABP3, while AVHELGHAL showed Medium evidence for MMP14 but Very Low for MMP15/16/24 demonstrating that experimental validation is protein-specific and non-transferable across homologs.
+        These findings highlight that sequence-based evidence aggregation, as commonly implemented risks inappropriate confidence inflation for unvalidated protein contexts.
+        
+        \textbf{Contextual evidence distinguishes sequence-identical therapeutic target from potential off-target}
+        The therapeutic target, MAGE-A3 (P43357), shares an identical peptide sequence with MAGE-A9 (P43362), a potential cross-reactive off-target. Sequence-based methods (similarity scoring, structural prediction, physicochemical properties) cannot distinguish these peptides. However, our evidence-based framework differentiated them substantially (LR products: 10,000 vs 270) based on experimental validation contexts, i.e., the information that could be found for each: MAGE-A3 was seen in experimental assays in normal tissue with strong binding to HLA-A*02:01, while MAGE-A9 demonstrated intermediate binding with the same allele exclusively in cancer contexts. Both achieved High evidence classifications, but with 37-fold difference in cumulative evidence strength reflecting distinct experimental profiles. This demonstrates how context-aware evidence aggregation provides discriminatory power beyond sequence-level analysis, enabling informed prioritization even among structurally identical epitopes (Supplementary Table 4).
+    
+    \subsection{\textbf{AnnoTopes: Different risk types need different metrics}}
+        \begin{figure*}[!htbp]%
+            \centering
+            \includegraphics[width=\linewidth]{Figures/figure_3.png}
+            \caption{\label{fig:fig3} A) peptides with available experimental data according to PEPREP (in-house source for pHLAs) and IEDB. Accordingly, $80\%$ of the predicted peptides have no previous record, indicating their potential for being novel off-targets. B) peptides classification according to experimental evidence: once the experimental data obtained from IEDB and PEPREP is leveraged, peptides were classified by their context relevance to this study, ~11\% were of high relevance, as their relevance is being observed in normal tissues and with strong binding evidence to HLA-A*02:01. C) CDFs of Bi-features score stratified by risk rank (High, Moderate, Low) according to k-mean method, and anchor status (Intact, Both Anchor, and Backbone). Peptides with mismatches at anchor positions (n=3) were excluded due to small sample size. Dashed lines indicate 50th and 90th percentiles. D) histograms of Bi-features score, and Multi-features score across all off-target peptides. Low correlation ($\rho = 0.19$) demonstrates orthogonal risk dimensions: Bi-features score quantifies immunological cross-reactivity (sequence similarity and MHC affinity), while Multi-features score integrates physicochemical properties (hydrophobicity, charge, aromaticity, aliphatic index, pI) influencing pHLA stability and TCR recognition, weighted by anchor status. E) Scatter plot comparing the ranked Bi-features and Multi-features scores. High Disagreement (upper-left and bottom-right corners), Top Bi-features (lie on the y-axis with x value = 0), and Top Multi-features (lie on the x-axis with y-value = 0) categories highlight peptides prioritized differently by each method. Dashed line indicates perfect rank agreement.}
+        \end{figure*}
+        
+        Ranking peptides by similarity represents a computational challenge, as relevant determinants arise from both sequence composition and physicochemical properties. In addition to the Bayesian evidence, which captures the empirical risk, we introduced two complementary scoring approaches designed to assess off-target potential from distinct biological perspectives.
+        
+        \subsubsection{\textbf{Bi-feature binding score}} 
+        To examine how sequence conservation and binding strength contribute to peptide similarity, we implemented a bi-feature ranking score combining BLOSUM-based sequence similarity with predicted MHC affinity (see methods \ref{sec:annotopes_bi}). This simplified model focuses on two features that have shown consistent interpretive value in our analyses. While intentionally minimal, it provides a transparent view of how closely peptides resemble the target in terms of both sequence composition and potential binding strength.
+        
+        \subsubsection{\textbf{Multi-feature mechanistic score}} 
+        Ranking peptides by similarity is challenging due to the interplay between global physicochemical properties and position-specific features that influence TCR recognition and MHC presentation. To address this, we developed a feature-based ranking approach that integrates global and backbone-specific biophysical descriptors into a single similarity score (see methods \ref{sec:annotopes_multi}). This framework enables systematic comparison of peptides in terms of both overall composition and TCR-facing structural properties. 
+
+        \subsubsection{\textbf{MAGEA3: Off-target candidates ranking}}
+        Peptides distributed across three risk categories: high risk (n=299, median score = 0.64), medium risk (n=557, median score = 0.44), and low risk (n=598, median score = 0.16) (Figure~\ref{fig:fig3}.C). SNPs-derived peptides were also represented across all risk categories: high risk (n=26, median score = 0.67), medium risk (n=59, median score = 0.44), and low risk (n=65, median score = 0.14). 
+        Peptides classified as high-risk exhibited both strong predicted HLA binding affinity to HLA-A*02:01 (median affinity: 30 nM) and med to high BLOSUM62 sequence similarity to MAGEA3 target (median similarity score: 21). Notably, [2/3] peptides with mismatches at the anchors demonstrated strong MHC binding affinity (KD $<$ 30nM), comparable to intact anchor peptides. This finding underscores the limitation of relying solely on structural classifications and supports the use of integrated functional scores. 
+        We assessed whether Bi-features ranking correlated with the experimental evidence we estimated earlier. Our ranking algorithm showed significant concordance with experimental validation status ($X^2$ test, p $<$ 0.05). This concordance confirms that our ranking algorithm successfully prioritizes peptides with known immunogenic potential while maintaining comprehensive coverage of all predicted off-targets regardless of available experimental data.
+        
+        We then checked whether our ranking method captures biologically relevant off-targets, we examined the scores assigned to 18 previously reported/validated off-target peptides. Among these known peptides, 17 peptides were classified as high risk and 1 as medium risk. Specifically, the rank score of MAGEA9 was 1 as it has the exact same target sequence; the peptides previously reported and speculated to be involved in fatal neurotoxic cases EPS8L2 and MAGEA12 (0.9 and 0.87 respectively) due to slightly different similarity and affinity. Notably, PPP2R1B was the only peptide from the known list and the only peptide that, has three mismatches exclusively at the anchor positions, was assigned a moderate risk 0.47 demonstrating that the Bi-feature score was sensitive to mismatches that compromise the forming of pHLA. 
+        Overall, this distribution demonstrates that our affinity-similarity ranking effectively prioritizes peptides with established off-target potential.
+
+        \textbf{Bi-feature versus Multi-feature}:\\
+        We computed eight biophysical properties for the peptides and compared this multi-biophysical approach with our established Bi-features ranking. Feature weights were adjusted based on mismatch location. When anchor positions, P1, P2 and P9, were intact (n=265, \~18.2\%), TCR-facing backbone features received 3-fold weight, as HLA presentation is maintained and TCR recognition dominates cross-reactivity risk. When only anchor positions contained mismatches (n=3, 0.2\%), i.e., backbone P3-P8 remained intact, global physicochemical properties received higher weight, as altered HLA binding affects overall peptide presentation. For peptides with mismatches at both anchor and backbone positions (n=1186, \~81.6\% of dataset), equal weights were applied. 
+        The two ranking scores showed weak pairwise correlations (Spearman $\rho = 0.19$), confirming they capture distinct dimensions of off-target risk. This orthogonality is because the two methods capture different but complementary aspects of peptide similarity. High-priority peptides identified by Bi-features show elevated biophysical similarity (mean = 0.71) compared to the full dataset (mean = 0.57), indicating partial concordance in the high-risk region despite low overall correlation (Figure~\ref{fig:fig3}.D). 
+        We finally examined cases where bi-feature and multi-feature scores diverged (Figure~\ref{fig:fig3}.E). To facilitate the comparison with Bi-features categories, we applied k-means clustering (k=3) to multi-biophysical distance values, yielding three categories: High Similarity (closest to target, n=361), Moderate Similarity (n=758), and Low Similarity (most distant from target, n=335).
+
+    \subsection{Validation}
+        \begin{figure*}[!htbp]%
+            \centering
+            \includegraphics[width=0.81\linewidth]{Figures/figure_4.png}
+            \caption{\label{fig:fig4} Experimental validation of EpiTox predicted peptides. A) Illustration of off-target prediction and validation. B) Proportions of predicted versus tested peptides across different classification categories. The stacked bar charts show the distribution of position-specific mismatch related to the target, experimental evidence levels, multi rank categories, and wildtype versus SNP-derived peptide status. C) Complex heatmap showing gene expression profiles across multiple tissues for 37 binders according to highSCORE. Gene expression values are displayed as log2 fold-change relative to target expression in the tissue. Top annotations from outermost to heatmap: disclosed peptide in MAGEA3 studies \& patent versus other; Off-targets mismatch profile at anchor position compared to the target; wildtype (WT) versus SNP-derived peptides; log2-transformed KD fold-change relative to target; negative values indicate lower binding affinity compared to target and visa versa; bar plot showing total gene expression (Total) summed across tissues per peptide. Bottom annotations indicate: Bi-feature rank, Multi-feature rank, and Experimental Evidence.}
+    \end{figure*}
+
+        %  VALIDATION SIZE NEEDS MORE LIGHT HERE
+        We used the molecule XXX as a model molecule to validate our results, knowing that these results are antibody-specific and that a different off-target landscape can emerge from using a different antibody. Figure~\ref{fig:fig4}.A illustrates the schematic steps starting with target sequence and hla-allele, off-target candidates generation and decision matrix for validation selection, followed by high throughput screening for kinetics measurements. 
+        In total, 538 peptides were tested using our highSCORE assay (see \ref{sec:highscore}), exceeding typical experimental validation in computational immunology studies (check selection strategy in Methods, Table \ref{sec:decisionmatrix}). Of these, 171 were generated from the X-scan \ref{sec:xscan}, of which 6 peptides were already identified as off-targets in EpiTox list with exactly one mismatch. In the following sections, we will be discussing the remaining 373 peptides that EpiTox predicted, annotated, and ranked.
+
+        Figure~\ref{fig:fig4}.B illustrates the experimental validation outcomes across our prediction strategies. Each category represents a different risk assessment approach aligned with our decision matrix (Table~\ref{sec:decisionmatrix}). The distribution of tested versus untested peptides reflects our strategic prioritization: categories with higher proportions of untested peptides represent lower-priority candidates under that particular scoring framework. In total, 37 peptides bound to the reference antibody. While 11 were previously disclosed as MAGEA3 off-targets, 26 were novel in this context. Notably, our Bayesian scoring method identifies peptides based on MHC databases (IEDB and PEPREP) evidence independent of target identity, enabling detection of off-targets that may be known for related antigens but overlooked for the specific target of interest. 
+        The binders, \~10\% of tested peptides, were identified across multiple prediction strategies, validating the complementary nature of our multi-modal approach. 
+        Notably, PPP2R1B-GIAELVHFS was the only peptide in our panel with mismatches exclusively at the anchor positions (P1, P2, and P3), and it did not achieve a consensus rank within our three-level ranking system (high, moderate, very low). Experimental validation demonstrated that it does not bind to the antibody, reinforcing our classification of binding positions and highlighting the critical role of positional context in experiment design.
+        Figure~\ref{fig:fig4}.C shows the gene expression profiles of source proteins for all 37 confirmed binders relative to the target. The gene expression revealed an instructive pattern: disclosed off-targets (n=11) predominantly showed target-like expression (7/11), while novel off-targets (n=26) were enriched for elevated expression (22/26, $\geq$2-fold). Critically, this distribution emerged because EpiTox applies expression as a post-prediction annotation rather than a selection criterion.
+
+        %============================================
+        % IF AT ALL NEEDED
+        Sequence logo analysis of validated peptides, (Supplementary figure XX), reveals conservation patterns consistent with HLA-A*02 anchor requirements (positions 1-3, hydrophobic residues) and a putative antibody recognition motif at position 4 (acidic residue, E). Variable positions (5-8) suggest antibody tolerance for substitutions at peripheral contact sites. This pattern validates that EpiTox captures peptides with shared MHC presentation and antibody cross-reactivity potential.
+        %============================================
+
+        \subsubsection{\textbf{Population-specific variants reveal novel off-targets}}
+            Our initial results suggest that integrating SNPs not only modify existing off-targets, but they could result in new off-targets that wouldn’t exist in the wildtype proteome. 
+            35 SNP-derived peptides representing different disagreement scenarios between the two scores (all were novel, so experimental evidence was identical to all = very low) were tested (Table~\ref{tab:snp_validated}), three of which emerged as binders to the antibody.
+            \begin{table}[!htbp]
+                \caption{SNP-derived peptide ranked by different scores\label{tab:snp_validated}}%
+                \centering
+                \begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lccc@{\extracolsep\fill}}
+                    \toprule
+                    \multicolumn{1}{c}{\multirow{2}{*}{\textbf{Multi-features}}} & 
+                    \multicolumn{3}{c}{\textbf{Bi-features}} \\
+                    \cmidrule(lr){2-4}
+                        & High & Moderate & Low \\
+                    \midrule
+                    High & 9 & 15 & 2 \\
+                    Moderate & 1 & 4 & 1 \\
+                    Low & 0 & 3 & 0 \\
+                    \bottomrule
+                \end{tabular*}
+                \begin{tablenotes}%
+                    \item Peptides that both scores agreed on low were not included for validation.
+                \end{tablenotes}
+            \end{table}
+            Interestingly, Q5T2L2-FRAELVHPA is the wildtype peptide has moderate affinity to HLA-A*02:01 (KD = 1584.9nM) and moderate similarity to the target (BLOSUM62 = 14); therefore, applying the different logics of our ranking scores disqualified this peptide from testing. However, the SNP-derived version of it, Q5T2L2-FQAELVHPA (SNP = rs376200113, p.Arg94Gln), increased the affinity to hla allele to very high (KD = 23.4nM) and it similarity (BLOSUM62 = 15); this elevation switched the risk of this peptide by Bi-feature score to high-risk group while its rank by Multi-feature score remained unchanged. The peptide therefore was tested and proved to be a binder with almost two-fold decreased affinity to the antibody compared to the target (log2 KD FC = -0.9). However, the expression level of its source was at the same target’s level with elevated level in the liver and epididymis (4FC \& 2FC respectively) indicating tissue-specific cross-reactivity or side toxicity.
+            
+            A striking find is peptide P21817-KLAENIHKL (rs746904839, p.Glu879Lys), compared to its wildtype peptide P21817-KLAENIHEL, this peptide has very similar predicted affinity (13 nM) and exact similarity score (BLOSUM62 = 24); the two peptides were ranked as high risk according to the Bi-feature score but low by the Multi-feature score. The testing not only confirmed the SNP-derived peptide is the binder, but also at a higher level compared to the target (log2 KD FC = 2.6 nM). Moreover, the overall gene expression in all 40 normal tissues was higher than the target, with extreme levels in the skeletal muscle and tongue (>8 log2 (FC)). This peptide highlights the need to include SNPs in the early screening, as individuals with genetic modification can suffer overall side toxicity.
+            
+            Finaly, A6NJW4-IVAYLVHYV represents the opposite scenario of the previous two, as the SNP didn’t improve its initial scores (rs140521451, p.Met236Ile), affinity to HLA dropped from 16.7 to 22.5 nM, yet still affine, sequence similarity also dropped from 25 to 23. The Bi-feature score ranked this peptide as highly risky and the Multi-feature score as moderate. When tested, the peptide bounded to the antibody at least one-fold better than the target (0.14) and its overall expression level was also target-level with elevated level at epididymis, choroid plexus and pancreas (GET EXACT VALUES). 
+
+            \subsubsection{\textbf{Experimental evidence and validation}}
+                We further validated our predictions against the Bayesian model we established for experimental evidence. Of the confirmed binders, 12 peptides were neither found in previously disclosed off-target lists nor in major MHC databases (IEDB, PEPREP). Three of these peptides were SNP-derived peptides as described in the previous section. Analysis of the remaining 9 peptides revealed that approximately half showed elevated expression across multiple tissues, while the other half exhibited expression levels comparable to the therapeutic target but with tissue-specific elevation patterns in placenta, esophagus, choroid plexus and other tissues. These findings demonstrate that reliance solely on existing evidence-based filtering may overlook genuine immunogenic risks, particularly for under-characterized epitopes or those with tissue-restricted expression.
+
+\section{Discussion}
+    The importance of TCR mimic (TCRm) therapies has increased substantially in recent years, with the role of HLA in triggering immune responses being increasingly exploited for therapeutic benefit. However, minimizing cross-reactivity through comprehensive off-target peptides prediction and validation remains a crucial aspect of antibody characterization and development.
+
+    We developed EpiTox, a multi-modular platform to address gaps in the field. 
+
+    % bayesian available nature of the data and its impact on the model, i.e. Most peptides lack experimental evidence - our model reflects this reality.  
+
+    \begin{table}[!htbp]
+        \caption{Caption text\label{tools_summary}}%
+        \begin{tabular*}{\columnwidth}{@{\extracolsep\fill}llll@{\extracolsep\fill}}
+            \toprule
+            column 1 & column 2  & column 3 & column 4\\
+            \midrule
+            row 1    & data 1   & data 2  & data 3  \\
+            row 2    & data 4   & data 5$^{1}$  & data 6  \\
+            row 3    & data 7   & data 8  & data 9$^{2}$  \\
+            \botrule
+        \end{tabular*}
+        \begin{tablenotes}%
+            \item Source: This is an example of table footnote this is an example of table footnote this is an example of table footnote this is an example of~table footnote this is an example of table footnote
+            \item[$^{1}$] Example for a first table footnote.
+            \item[$^{2}$] Example for a second table footnote.
+        \end{tablenotes}
+    \end{table}
+
+\section{Lists}\label{sec9}
+
+List in \LaTeX{} can be of three types: numbered, bulleted and unnumbered. The ``enumerate'' environment produces a numbered list, the 
+``itemize'' environment produces a bulleted list and the ``unlist''
+environment produces an unnumbered list.
+In each environment, a new entry is added via the \verb+\item+ command.
+\begin{enumerate}[1.]
+\item This is the 1st item
+
+\item Enumerate creates numbered lists, itemize creates bulleted lists and
+unnumerate creates unnumbered lists.
+\begin{enumerate}[(a)]
+\item Second level numbered list. Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+
+\item Second level numbered list. Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+\begin{enumerate}[(ii)]
+\item Third level numbered list. Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+
+\item Third level numbered list. Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+\end{enumerate}
+
+\item Second level numbered list. Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+
+\item Second level numbered list. Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+\end{enumerate}
+
+\item Enumerate creates numbered lists, itemize creates bulleted lists and
+description creates unnumbered lists.
+
+\item Numbered lists continue.
+\end{enumerate}
+Lists in \LaTeX{} can be of three types: enumerate, itemize and description.
+In each environment, a new entry is added via the \verb+\item+ command.
+\begin{itemize}
+\item First level bulleted list. This is the 1st item
+
+\item First level bulleted list. Itemize creates bulleted lists and description creates unnumbered lists.
+\begin{itemize}
+\item Second level dashed list. Itemize creates bulleted lists and description creates unnumbered lists.
+
+\item Second level dashed list. Itemize creates bulleted lists and description creates unnumbered lists.
+
+\item Second level dashed list. Itemize creates bulleted lists and description creates unnumbered lists.
+\end{itemize}
+
+\item First level bulleted list. Itemize creates bulleted lists and description creates unnumbered lists.
+
+\item First level bulleted list. Bullet lists continue.
+\end{itemize}
+
+
+\section{Conclusion}
+
+Some Conclusions here.
+
+\section{Competing interests}
+No competing interest is declared.
+
+\section{Author contributions statement}
+    H.A.*, S.S., and O.S. developed the conceptual design and overall architecture of the EpiTox workflow. The implementation, development, and integration of the computational pipeline were carried out by H.A., A.S., O.S., and S.K. The design and construction of the supporting PEPREP database were performed by M.A. and H.A. The MAGE-A3 study was designed by S.S., K.H., H.A., and J.B. Experimental validation and verification of computational results, including highSCORE-based measurements, were conducted by T.H., P.H., K.H., and G.R. H.A., S.K., O.S., and J.B. wrote the manuscript. All authors contributed to manuscript review and revisions.
+
+\section{Acknowledgments}
+AI use: GPT-4, GPT-5 and Claude Sonnet 4 models were employed exclusively for language
+refinement during manuscript preparation.
+
+\bibliographystyle{plain}
+\bibliography{reference}
+\end{document}

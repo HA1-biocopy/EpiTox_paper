@@ -285,7 +285,7 @@ g = ggplot(peptide_data) +
   labs(x = "Ranking scores distribution", caption = "Blue = Bi features\nGreen = Multibiophys") +
   theme_light() +
   ggtitle("Bi-features vs. Multifeatures ranking scores distribution")
-ggsave(plot = g, "../../data/Figure3_D_bi_multi_features_scores_histogram.pdf")
+ggsave(plot = g, "../../data/Figure4_C_bi_multi_features_scores_histogram.pdf")
 
 # Compare target to dataset mean for each feature
 target_comparison <- data.frame(
@@ -602,7 +602,7 @@ p5 <- ggplot(peptide_data, aes(x = rank_Bi_features, y = rank_multibiophys)) +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   scale_color_manual(values = biocopy_colors)
 print(p5)
-ggsave(plot = p5, "../../data/Figure3_E_bi_multi_features_scores_disagreement.pdf")
+#ggsave(plot = p5, "../../data/Figure3_E_bi_multi_features_scores_disagreement.pdf")
 
 # Check distribution
 cat("\n=== Multi-Biophysical Categories (k-means, k=3) ===\n")

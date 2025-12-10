@@ -27,6 +27,7 @@ epitox = openxlsx::read.xlsx("../../data/full_peptide_rankings.xlsx") %>%
   mutate(peptide = gsub(".+\\_", "", id),
          uniprot = gsub("\\_.+$", "", id),
          Tested = ifelse(peptide %in% score_reference$peptide, "Yes", "No")) %>%
+  filter(confidence_level != "Low") %>%
   merge(., score_reference, all.x =T, by = "peptide") %>%
   relocate(uniprot, peptide) %>%
   relocate(Tested, KD, n, lev_dist, Outcome, log2_target_FC, .after = "multibiophys_category")
@@ -92,6 +93,25 @@ plot_data_stacked <- proportion_data %>%
                          levels = c("Pct_binders", "Pct_non_binders", "Pct_not_tested"),
                          labels = c("Binders", "Non-Binders (Tested)", "Not Tested")))
 
+# Reshape for stacked bar chart
+plot_data_stacked <- proportion_data %>%
+  mutate(
+    # Convert Pct_tested from percentage of category to percentage of total
+    Pct_tested_of_total = (Pct_tested / 100) * Pct_of_total,
+
+    # Now all calculations are in terms of percentage of total dataset
+    Pct_not_tested = Pct_of_total - Pct_tested_of_total,
+    Pct_non_binders = Pct_tested_of_total - Pct_binders_of_total,
+    Pct_binders = Pct_binders_of_total
+  ) %>%
+  select(Variable, Category, Pct_not_tested, Pct_non_binders, Pct_binders) %>%
+  pivot_longer(cols = c(Pct_not_tested, Pct_non_binders, Pct_binders),
+               names_to = "Status",
+               values_to = "Percentage") %>%
+  mutate(Status = factor(Status,
+                         levels = c("Pct_binders", "Pct_non_binders", "Pct_not_tested"),
+                         labels = c("Binders", "Non-Binders (Tested)", "Not Tested")))
+
 biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#2C4255", "#C61E19", "#438D99", "#958BB2", "#6B7B88",
                    "#338232", "#F08000", "#3373A1", "#64686A", "#D14B47", "#98D0BC", "#4F3D7F")
 
@@ -119,8 +139,9 @@ p1 <- ggplot(plot_data_stacked, aes(x = Category, y = Percentage, fill = Status)
   scale_fill_manual(values = c("Binders" = biocopy_colors[1],
                                "Non-Binders (Tested)" = biocopy_colors[5],
                                "Not Tested" = biocopy_colors[2]))
+p1
 
-ggsave("../../data/Figure_4_B_horz.pdf", plot = p1, width = 11, height = 5)
+ggsave("../../data/Figure_5_B_horz.pdf", plot = p1, width = 11, height = 5)
 
 p1 <- ggplot(plot_data_stacked, aes(x = Category, y = Percentage, fill = Status)) +
   geom_bar(stat = "identity", width = 0.7) +
@@ -148,7 +169,7 @@ p1 <- ggplot(plot_data_stacked, aes(x = Category, y = Percentage, fill = Status)
 
 print(p1)
 
-ggsave("../../data/Figure_4_B.pdf", plot = p1, width = 4.5, height = 14)
+ggsave("../../data/Figure_5_B.pdf", plot = p1, width = 4.5, height = 14)
 
 p2 <- ggplot(plot_data_stacked, aes(x = Category, y = Percentage, fill = Status)) +
   geom_bar(stat = "identity", width = 0.7) +

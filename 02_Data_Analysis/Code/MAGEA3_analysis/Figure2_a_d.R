@@ -105,3 +105,17 @@ epitox = openxlsx::read.xlsx("../../data/full_peptide_rankings.xlsx")
              labels_cex = 1.5)
  mtext(paste0("anchor_mismatch =", nrow(epitox[epitox$anchor_status == "anchor_mismatch",])), side=1, line=4, cex=0.8)
 
+ df = epitox %>%
+   filter(Wildtype == "No")
+
+ PieChart(anchor_status, data = df, hole = 0,
+          fill = c( "#958BB2", "#FBB800","#99CFE9", "#438D99"),
+          color="white",
+          main = "SNP-derived peptides mismatch classification",
+          labels = "input",
+          labels_position= "in",
+          labels_size=1.5,
+          labels_color = c("black", "white"),
+          labels_cex = 1.5)
+ mtext(paste0("Total =", nrow(df)), side=1, line=4, cex=0.8)
+
