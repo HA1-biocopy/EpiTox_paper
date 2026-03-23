@@ -23,7 +23,8 @@ epitox = openxlsx::read.xlsx("../../data/OT_SCORE_full_annotation.xlsx") %>%
          genes = sub("\\s.*", "", Gene.Names)) %>%
   filter(Outcome == "Binder") %>%
   arrange(anchor_status, Wildtype, Bi_feature_rank,
-          Multi_feature_rank, Experimental_Evidence, log2_target_FC)
+          Multi_feature_rank, Experimental_Evidence, log2_target_FC) %>%
+  distinct(id, .keep_all = T) # this was added after the final version since MAGEA2 had two arrows in the gxp -> the binders are 36 not 37
 
 target = epitox %>%
   filter (id == "P43362_KVAELVHFL")
