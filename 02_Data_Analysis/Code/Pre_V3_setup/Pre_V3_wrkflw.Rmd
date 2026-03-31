@@ -1,0 +1,355 @@
+---
+title: "Get Baysian score"
+author: "Hoor Al-Hasani"
+date: "2026-03-23"
+params:
+  epitox: "~/Documents/Projects/MAGEA3/EpiTox_results/Cutoff_4/Table/HPA_genes_nTPM.xlsx"   
+  xscan: "~/Documents/Projects/MAGEA3/EpiTox_results//Cutoff_4/Table/Xscan_MAGEA3.xlsx"
+  iedb_files: "~/Documents/Projects/MAGEA3/EpiTox_results/Cutoff_4/PrediTopes/DB_annotation/"
+  target_allele: "HLA-A*02:01"
+  target: "KVAELVHFL"
+  affinity: 14.39613
+  DIR: "./data/Bayesian/MAGEA3" # with prefix
+  SaveResults: false
+  
+output: html_document
+---
+
+# Declare libraries
+
+```{r setup, include=FALSE, echo=FALSE, comment="#"}
+
+biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#C61E19", "#438D99", "#958BB2", "#6B7B88",
+                   "#338232", "#F08000", "#3373A1", "#64686A", "#D14B47", "#98D0BC", "#4F3D7F", "#2C4255")
+
+
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(lessR)
+library(tidyr)
+library(patchwork)
+
+#library(ggplot2)
+#library(ggpubr)
+#library(Peptides)
+#library(tidyverse)
+#library(corrplot)
+#library(ggrepel)
+```
+
+### Reading input
+
+the input to the model is all the annotations that EpiTox extracted from IEDB. For this target (_MAGEA3_), both HLA-ligand atlas and PEPREP contribution was subset of the IEDB whole annotation. See notes bellow to understand some of the decisions that were made.
+
+The input is:
+
+- the final table from V2.5's `annotopes`: _HPA_genes_nTPM.xlsx_
+
+- the experimental evidence file from the previous step
+
+- _IEDB_ annotated peptides
+
+
+## Step 1: Estimate _Experimental Evidence_
+
+The experimental evidence is a Baysian-based model to evaluate and summarize the context evidence that is available for each peptide.
+the concept is to determine the peptide with its protein ensuring context aware evaluation.
+
+
+```{r iedb, include=T, echo=F, comment=NA}
+
+# Bayesian_LR_sensitivity.R: to access LR thresholds
+# Bayesian_workflow.R: the main orchestrator -> will be tranformed to this section directly
+# utils_exp.R: will test if it is needed at all
+# Bayesian_peptide_assessment.R:
+# Bayesian_preprocess_experimental_data.R:
+
+source("../MAGEA3_analysis/utils_exp.R")
+source("../MAGEA3_analysis/Bayesian_peptide_assessment.R")
+source("../MAGEA3_analysis/Bayesian_preprocess_experimental_data.R")
+
+files = list.files(path = params$iedb_files,
+                   pattern = "*sequence.csv", full.names = T)
+
+length(files) %>% paste(., "files were found!") %>% print()
+basename(files) %>% print()
+
+experimental_df = lapply(files, function(f){
+  if (file.size(f) == 0) return(NULL)
+  first_line <- readLines(f, n = 1, warn = FALSE)
+  if (length(first_line) == 0 || all(trimws(first_line) == "")) return(NULL)
+
+  x = read.csv(f) %>%
+    select(parent_source_antigen_name, curated_source_antigen.accession, linear_sequence, reference_id,
+           qualitative_measure, mhc_class, mhc_allele_name,
+           assay_names, disease_names) %>%
+    dplyr::rename(
+      peptide = linear_sequence,
+      study_ref = reference_id,
+      disease = disease_names,
+      Experimental_method = assay_names,
+      Binding = qualitative_measure,
+      hla_class = mhc_class,
+      hla_allele = mhc_allele_name)
+  return(x)
+
+}) %>%
+  do.call("rbind",.) %>%
+  mutate(uniprot = gsub("\\.\\d+", "", curated_source_antigen.accession),
+         disease = gsub("\\[\\'(.+)\\'\\]", "\\1", disease),
+         curated_source_antigen.accession = NULL,
+         id = paste0(uniprot, "_", peptide),
+         uniprot = NULL, peptide = NULL,
+         is_normal = case_when(
+           disease == "healthy" ~ TRUE,
+           TRUE ~ FALSE
+         )) %>%
+  relocate(id)
+```
+
+```{r epitox, include=FALSE, echo=FALSE, comment="#"}
+# loading EpiTox's peptide list
+# --------------------------------
+epitox = openxlsx::read.xlsx(params$epitox) %>%
+  select(ensembl_gene_id, uniprot, Gene.Names, peptide, blosum_similarity, mismatch,
+         Wildtype, Peptide_HLA_Atlas, affinity, presentation_score) %>%
+  distinct(.keep_all = T) %>%
+  mutate(id = paste0(uniprot, "_", peptide)) %>%
+  dplyr::rename()%>%
+  distinct(peptide, uniprot, .keep_all = T)
+
+```
+
+### Core analysis
+
+process experimental data, followed by bayesian assessment then saving the results
+
+```{r preprocess, include=FALSE, echo=FALSE, comment="#"}
+preprocessed <- preprocess_for_bayesian(epitox, experimental_df,
+                                        target_allele = params$target_allele,
+                                        target_disease = NULL,
+                                        target_class = "I")
+
+# Assess
+results <- bayesian_peptide_assessment(
+  preprocessed,
+  target_allele = params$target_allele
+)
+
+if (params$SaveResults) generate_assessment_report(results, output_prefix = params$DIR)
+
+```
+
+#### Generate plots
+```{r visualize_exp_pie, echo=FALSE, warning=FALSE, message=FALSE, fig.height=5, fig.width=15}
+
+cols <- c("High" = "#C61E19", "Medium" = "#FDE399",
+          "Low" = "#8ECAE6", "Very Low" = "#A2C510")
+
+df_pie1 <- as.data.frame(table(results$confidence_level))
+colnames(df_pie1) <- c("confidence_level", "count")
+p1 <- ggplot(df_pie1, aes(x = "", y = count, fill = confidence_level)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  scale_fill_manual(values = cols) +
+  labs(title = paste0("Total peptides: ", nrow(results)), fill = "Confidence level") +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+df_pie2 <- as.data.frame(table(results$interpretation))
+colnames(df_pie2) <- c("interpretation", "count")
+p2 <- ggplot(df_pie2, aes(x = "", y = count, fill = interpretation)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  scale_fill_manual(values = biocopy_colors) +
+  labs(title = paste0("Total peptides: ", nrow(results)), fill = "Interpretation") +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+p1 + p2
+```
+
+
+```{r visualize_I, echo=FALSE, comment=NA, fig.keep='all', results = 'hide', warning=FALSE, , message=FALSE}
+g = ggplot(results, aes(affinity/10^5, posterior_prob)) +
+  geom_point(size = 1, aes(col = evidence)) +
+  theme_light()
+
+#print (g)
+
+g =ggplot(results, aes(posterior_prob, affinity*10^-5)) +
+  geom_point(size = 1, aes(col = confidence_level)) +
+  theme_light() +
+  facet_wrap(~confidence_level)
+
+#print(g)
+```
+
+## Step 2: TPT
+
+### Target
+
+```{r TPT, include=T, echo=F, comment=NA}
+# create TPT -> target pattern/profile template
+source("../MAGEA3_analysis/xscan_target_utils.R") # for target functions
+source("../MAGEA3_analysis/xscan_OT_utils.R") # for OT functions
+
+
+#target = data.frame(peptide = params$target, params$affinity)
+substitution_matrix <- openxlsx::read.xlsx(params$xscan) %>%
+  select(peptide, affinity) %>%
+  convert_to_matrix(df = ., wt_peptide = as.character(params$target))
+
+# Run analysis
+anchor_results <- analyze_anchor_positions(substitution_matrix, as.numeric(params$affinity), params$target)
+anchor_results <- analyze_position_compensation(anchor_results)
+
+```
+
+```{r visualize_II, echo=FALSE, comment=NA, fig.keep='all', results = 'hide', warning=FALSE, , message=FALSE, fig.height=5, fig.width=15}
+L = nchar(params$target)
+p1 = ggplot(anchor_results, aes(x = Position, y = Fold_Change_Mean)) +
+  geom_col(aes(fill = Category), color = "#2C4255") +  # Changed from Is_Anchor to Category
+  geom_hline(yintercept = 1, linetype = "dashed", color = "#A2C510") +
+  scale_fill_manual(values = c("Classical Anchor" = "#A2C510",
+                               "Permissive" = "#99CFE9",
+                               "Flexible Anchor" = "#4F3D7F",
+                               "Neutral" = "#F0F0F0"),
+                    name = "Position Type") +
+  labs(title = "Mean Fold Change in KD by Position",
+       x = "Peptide Position",
+       y = "Mean Fold Change\n(Mutant KD / WT KD)") +
+  theme_minimal() +
+  theme(text = element_text(size = 10),
+        legend.position = "none") +
+  scale_x_continuous(breaks = 1:L)
+
+
+
+p2 = ggplot(anchor_results, aes(x = Position, y = Percent_Better_Than_WT)) +
+    geom_col(aes(fill = Category), color = "#2C4255") +
+    geom_hline(yintercept = 50, linetype = "dashed", color = "#2C4255") +
+    scale_fill_manual(values = c("Classical Anchor" = "#A2C510",
+                               "Permissive" = "#99CFE9",
+                               "Flexible Anchor" = "#4F3D7F",
+                               "Neutral" = "#F0F0F0"),
+                    name = "Position Type") +
+    labs(title = "Position Permissiveness",
+       subtitle = "% of substitutions that maintain/improve binding",
+       x = "Peptide Position",
+       y = "% Better or Equal to WT") +
+    theme_light() +
+    theme(text = element_text(size = 10),
+                          legend.position = "bottom") +
+    scale_x_continuous(breaks = 1:L) +
+    coord_flip()
+
+p1 +p2
+
+```
+
+### Off-target classification
+
+```{r TPT_OT, include=T, echo=F, comment=NA}
+target_classifications = anchor_results %>%
+  mutate(WT_AA = strsplit(params$target, "")[[1]]) %>%
+  select(Position, WT_AA, Category)
+
+offtargets_data = epitox %>%
+  select(uniprot, peptide, Wildtype, blosum_similarity, mismatch,
+         affinity, presentation_score) %>%
+  distinct(.keep_all = T)
+
+# Perform complete analysis
+analysis_results <- analyze_offtargets(params$target, target_classifications, offtargets_data)
+
+# Create comprehensive summary table
+summary_table <- create_summary_table(analysis_results) %>%
+  mutate(uniprot = gsub(".+\\_", "", id),
+         peptide = gsub("\\_.+$", "", id),
+         id = NULL) %>%
+  relocate(uniprot, peptide) %>%
+  arrange(Total_Mismatches)
+
+categorized <- summary_table %>%
+  mutate(
+    Category = case_when(
+      Anchor_Mismatches > 0 & Exposed_Mismatches > 0 ~ "Both Anchor & Backbone",
+      Anchor_Mismatches > 0 & Exposed_Mismatches == 0 ~ "Anchor Only",
+      Anchor_Mismatches == 0 & Exposed_Mismatches > 0 ~ "Backbone Only",
+      TRUE ~ "Perfect Match"
+    )
+  )
+
+categorized %>% head %>% print()
+```
+
+```{r visualize_mutliFeatures_pie, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15}
+# just for the plots
+df_pie1 <- as.data.frame(table(categorized$Category))
+colnames(df_pie1) <- c("Category", "count")
+# Calculate percentages and label positions
+df_pie1 <- df_pie1 %>%
+  mutate(
+    percentage = count / sum(count) * 100,
+    label = paste0(count, "\n(", round(percentage, 1), "%)")
+  )
+
+p1 <- ggplot(df_pie1, aes(x = "", y = count, fill = Category)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  geom_text(
+    aes(label = label),
+    position = position_stack(vjust = 0.5),
+    size = 3.5,
+    color = "black"
+  ) +
+  scale_fill_manual(values = biocopy_colors) +
+  labs(title = paste0("Total peptides: ", nrow(categorized)), fill = "Category") +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "none")
+
+p2 <- ggplot(categorized, aes(Total_Mismatches, fill = Category)) +
+  geom_bar(position = "dodge") +
+  theme_light() +
+  scale_fill_manual(values = biocopy_colors) +
+  labs(title = "Off-targets Classification by TPT",
+       subtitle = "OT - position permissiveness Classification according to the target",
+       x = "Edit distance",
+       y = "Count") #+
+  #theme(legend.position = "bottom")
+
+p1 + p2
+```
+
+
+## Step 3: Estimate _Multi-Features score_
+
+```{r bayesian, include=T, echo=F, comment=NA}
+
+# Bayesian_LR_sensitivity.R: to access LR thresholds
+# Bayesian_workflow.R: the main orchestrator -> will be tranformed to this section directly
+# utils_exp.R: will test if it is needed at all
+# Bayesian_peptide_assessment.R:
+# Bayesian_preprocess_experimental_data.R:
+
+source("../MAGEA3_analysis/Multi_features_ranking_Utils.R")
+source("../MAGEA3_analysis/Bayesian_peptide_assessment.R")
+source("../MAGEA3_analysis/Bayesian_preprocess_experimental_data.R")
+
+
+
+```
+
+# Notes
+
+## Experimental evidence
+  In the experimental evidence scoring, HLA-ligand Atlas and PEPREP were not used due to the following reasons:
+
+  - _PEPREP_: At the time, data extraction was not possible from peprep and the schema was not stabilitzed enough to track down the information correctly
+
+  - _HLA-ligand atlas_: at the time there was no real solution for the incomplete mapping between allele-tissue-peptide problem
+
+
+

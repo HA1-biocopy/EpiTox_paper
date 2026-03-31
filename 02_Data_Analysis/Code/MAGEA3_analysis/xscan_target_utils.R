@@ -149,7 +149,7 @@ analyze_position_compensation <- function(anchor_results) {
   anchor_results$Category[anchor_results$Is_Anchor_Classical &
                             anchor_results$Is_Permissive] <- "Flexible Anchor"
 
-  cat("Position categories:\n")
+  cat("Position categories (counts):\n")
   print(table(anchor_results$Category))
 
   cat("\n\nClassical Anchors (high sensitivity, intolerant to mutations):\n")

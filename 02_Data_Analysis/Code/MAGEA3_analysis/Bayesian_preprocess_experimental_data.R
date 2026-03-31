@@ -13,7 +13,7 @@ library(dplyr)
 library(tidyr)
 
 # Source utility functions
-source("utils_exp.R")
+#source("utils_exp.R")
 
 #' Aggregate experimental evidence with context weighting
 #'
