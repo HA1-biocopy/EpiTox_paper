@@ -1,15 +1,18 @@
 ---
-title: "Get Baysian score"
+title: "EpiTox: Full annotations"
 author: "Hoor Al-Hasani"
 date: "2026-03-23"
 params:
-  epitox: "~/Documents/Projects/MAGEA3/EpiTox_results/Cutoff_4/Table/HPA_genes_nTPM.xlsx"   
-  xscan: "~/Documents/Projects/MAGEA3/EpiTox_results//Cutoff_4/Table/Xscan_MAGEA3.xlsx"
-  iedb_files: "~/Documents/Projects/MAGEA3/EpiTox_results/Cutoff_4/PrediTopes/DB_annotation/"
+  epitox: "/Users/hoor.alhasani/Documents/Projects/Quick/MAGEA4/EpiTox_V2.5/MAGEA4/Reports/AnnoTopes_MAGEA4.xlsx" #"~/Documents/Projects/MAGEA3/EpiTox_results/Cutoff_4/Table/HPA_genes_nTPM.xlsx"   
+  xscan: "/Users/hoor.alhasani/Documents/Projects/Quick/MAGEA4/EpiTox_V2.5/MAGEA4/Reports/Xscan_MAGEA4.xlsx" #"~/Documents/Projects/MAGEA3/EpiTox_results//Cutoff_4/Table/Xscan_MAGEA3.xlsx"
+  iedb_files: "/Users/hoor.alhasani/Documents/Projects/Quick/MAGEA4/EpiTox_V2.5/MAGEA4/PrediTopes/DB_annotation/"  #"~/Documents/Projects/MAGEA3/EpiTox_results/Cutoff_4/PrediTopes/DB_annotation/"
   target_allele: "HLA-A*02:01"
-  target: "KVAELVHFL"
-  affinity: 14.39613
-  DIR: "./data/Bayesian/MAGEA3" # with prefix
+  target: "GVYDGREHTV" #"KVAELVHFL"
+  affinity: 51.104 #14.39613
+  DIR: "/Users/hoor.alhasani/Documents/Projects/Quick/MAGEA4/EpiTox_V2.5/MAGEA4/Pre_V3/MAGEA4" #"/Users/hoor.alhasani/Documents/Projects/D003/Patent_Paper/paper_materials/02_Data_Analysis/data/MAGEA3" # with prefix
+  SCORE_VR6: "/Volumes/lab/03_HighSCORE/P030_05/P030_05_000_Triplicates_results/P030_VD_05_008_PPB444_TPP106​_anabel104/PPB-444_kinetic_table.xlsx"
+  SCORE_VR57: "/Volumes/lab/03_HighSCORE/P030_05/P030_05_000_Triplicates_results/P030_VD_05_016_PPB441_TPP96​_anabel104/PPB-441_kinetic_table.xlsx"
+  SCORE_VR58: "/Volumes/lab/03_HighSCORE/P030_05/P030_05_000_Triplicates_results/P030_VD_05_015_PPB442_TPP98​_anabel104/PPB-442_kinetic_table.xlsx"
   SaveResults: false
   
 output: html_document
@@ -27,19 +30,65 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(lessR)
 library(tidyr)
+library(ggpubr)
+library(ggplot2)
+library(ggrepel)
+library(circlize)
+library(Peptides)
+library(tidyverse)
 library(patchwork)
+library(ggcorrplot)
+library(ComplexHeatmap)
 
-#library(ggplot2)
-#library(ggpubr)
-#library(Peptides)
-#library(tidyverse)
-#library(corrplot)
-#library(ggrepel)
+
+top_annotation <- function(gxp = NA,  to_heatmap = NA, scale = F){
+
+  if(scale){
+    gxp_colSums = colMeans(scale(t(to_heatmap)), na.rm = T)
+  }else{
+    gxp_colSums = colMeans(t(to_heatmap), na.rm = T)
+  }
+  top_ha = HeatmapAnnotation(
+    anchor_status = gxp$anchor_status,
+    WT = gxp$Wildtype,
+    log2_target_KD_FC = anno_barplot(gxp$log2_target_FC,  gp = gpar( fill = "#6696B9"), height = unit(1.3, "cm")),
+    Total = anno_barplot(
+      gxp_colSums,
+      bar_width = 1, gp = gpar(fill = "#338232", lwd = 0.2, col ="black"),
+      height = unit(1.3, "cm")
+    ),
+    col = list(
+      anchor_status = c("anchor_mismatch" = "#F08000", "Intact" = "#438D99",
+                        "Both Anchor & Backbone" = "#EAD7A4"),
+      WT = c("No" = "#2C4255", "Yes" = "#F0F0F0")
+    ),
+    gap = unit(c(1,1,2,2,0,0,2), "mm"),
+    border = c(Bi_feature_rank =T, Multi_feature_rank =T, Experimental_Evidence =T)
+  )
+  return (top_ha)
+}
+
+bottom_annotation <- function(gxp = NA,  to_heatmap = NA, scale = F){
+  top_ha = HeatmapAnnotation(
+    Bi_feature_rank = gxp$Bi_feature_rank,
+    Multi_feature_rank = gxp$Multi_feature_rank,
+    Experimental_Evidence = gxp$Experimental_Evidence,
+    col = list(
+      Bi_feature_rank = c("High" = "#00508A", "Moderate" = "#B0DAEE", "Low" = "#F4FAFD"),
+      Multi_feature_rank = c("High" = "#00508A", "Moderate" = "#B0DAEE", "Low" = "#F4FAFD"),
+      Experimental_Evidence = c("High" = "#00508A", "Moderate" = "#B0DAEE", "Very Low" = "#F4FAFD")
+    ),
+    #gap = unit(c(1,0,2,2,0,0,2), "mm"),
+    border = c(Bi_feature_rank =T, Multi_feature_rank =T, Experimental_Evidence =T)
+  )
+  return (top_ha)
+}
+
 ```
 
 ### Reading input
 
-the input to the model is all the annotations that EpiTox extracted from IEDB. For this target (_MAGEA3_), both HLA-ligand atlas and PEPREP contribution was subset of the IEDB whole annotation. See notes bellow to understand some of the decisions that were made.
+the input to the model is all the annotations that EpiTox extracted from IEDB. For this target (_MAGEA4_), both HLA-ligand atlas and PEPREP contribution was subset of the IEDB whole annotation. See notes bellow to understand some of the decisions that were made.
 
 The input is:
 
@@ -112,7 +161,7 @@ experimental_df = lapply(files, function(f){
 # --------------------------------
 epitox = openxlsx::read.xlsx(params$epitox) %>%
   select(ensembl_gene_id, uniprot, Gene.Names, peptide, blosum_similarity, mismatch,
-         Wildtype, Peptide_HLA_Atlas, affinity, presentation_score) %>%
+         Wildtype, Peptide_HLA_Atlas, affinity, presentation_score, Ranking_score, Rank) %>%
   distinct(.keep_all = T) %>%
   mutate(id = paste0(uniprot, "_", peptide)) %>%
   dplyr::rename()%>%
@@ -124,60 +173,62 @@ epitox = openxlsx::read.xlsx(params$epitox) %>%
 
 process experimental data, followed by bayesian assessment then saving the results
 
-```{r preprocess, include=FALSE, echo=FALSE, comment="#"}
+```{r bayesian, include=FALSE, echo=FALSE, comment="#"}
 preprocessed <- preprocess_for_bayesian(epitox, experimental_df,
                                         target_allele = params$target_allele,
                                         target_disease = NULL,
                                         target_class = "I")
 
 # Assess
-results <- bayesian_peptide_assessment(
+bayesian_results <- bayesian_peptide_assessment(
   preprocessed,
   target_allele = params$target_allele
 )
 
-if (params$SaveResults) generate_assessment_report(results, output_prefix = params$DIR)
+if (params$SaveResults) generate_assessment_report(bayesian_results, output_prefix = params$DIR)
 
 ```
 
 #### Generate plots
-```{r visualize_exp_pie, echo=FALSE, warning=FALSE, message=FALSE, fig.height=5, fig.width=15}
+```{r bayesian_visualize_exp_pie, echo=FALSE, warning=FALSE, message=FALSE, comment= NA, fig.height=5, fig.width=15}
 
 cols <- c("High" = "#C61E19", "Medium" = "#FDE399",
           "Low" = "#8ECAE6", "Very Low" = "#A2C510")
 
-df_pie1 <- as.data.frame(table(results$confidence_level))
+df_pie1 <- as.data.frame(table(bayesian_results$confidence_level))
 colnames(df_pie1) <- c("confidence_level", "count")
 p1 <- ggplot(df_pie1, aes(x = "", y = count, fill = confidence_level)) +
   geom_col(width = 1, color = "white") +
   coord_polar(theta = "y") +
   scale_fill_manual(values = cols) +
-  labs(title = paste0("Total peptides: ", nrow(results)), fill = "Confidence level") +
+  labs(title = paste0("Total peptides: ", nrow(bayesian_results)), fill = "Confidence level") +
   theme_void() +
   theme(plot.title = element_text(hjust = 0.5))
 
-df_pie2 <- as.data.frame(table(results$interpretation))
+df_pie2 <- as.data.frame(table(bayesian_results$interpretation))
 colnames(df_pie2) <- c("interpretation", "count")
 p2 <- ggplot(df_pie2, aes(x = "", y = count, fill = interpretation)) +
   geom_col(width = 1, color = "white") +
   coord_polar(theta = "y") +
   scale_fill_manual(values = biocopy_colors) +
-  labs(title = paste0("Total peptides: ", nrow(results)), fill = "Interpretation") +
+  labs(title = paste0("Total peptides: ", nrow(bayesian_results)), fill = "Interpretation") +
   theme_void() +
   theme(plot.title = element_text(hjust = 0.5))
 
 p1 + p2
+
+print(df_pie1)
 ```
 
 
-```{r visualize_I, echo=FALSE, comment=NA, fig.keep='all', results = 'hide', warning=FALSE, , message=FALSE}
-g = ggplot(results, aes(affinity/10^5, posterior_prob)) +
+```{r bayesian_visualize_I, echo=FALSE, comment=NA, fig.keep='all', results = 'hide', warning=FALSE, , message=FALSE}
+g = ggplot(bayesian_results, aes(affinity/10^5, posterior_prob)) +
   geom_point(size = 1, aes(col = evidence)) +
   theme_light()
 
 #print (g)
 
-g =ggplot(results, aes(posterior_prob, affinity*10^-5)) +
+g =ggplot(bayesian_results, aes(posterior_prob, affinity*10^-5)) +
   geom_point(size = 1, aes(col = confidence_level)) +
   theme_light() +
   facet_wrap(~confidence_level)
@@ -206,7 +257,7 @@ anchor_results <- analyze_position_compensation(anchor_results)
 
 ```
 
-```{r visualize_II, echo=FALSE, comment=NA, fig.keep='all', results = 'hide', warning=FALSE, , message=FALSE, fig.height=5, fig.width=15}
+```{r TPT_visualize_II, echo=FALSE, comment=NA, fig.keep='all', results = 'hide', warning=FALSE, , message=FALSE, fig.height=5, fig.width=15}
 L = nchar(params$target)
 p1 = ggplot(anchor_results, aes(x = Position, y = Fold_Change_Mean)) +
   geom_col(aes(fill = Category), color = "#2C4255") +  # Changed from Is_Anchor to Category
@@ -271,7 +322,7 @@ summary_table <- create_summary_table(analysis_results) %>%
   relocate(uniprot, peptide) %>%
   arrange(Total_Mismatches)
 
-categorized <- summary_table %>%
+anchor_categorized <- summary_table %>%
   mutate(
     Category = case_when(
       Anchor_Mismatches > 0 & Exposed_Mismatches > 0 ~ "Both Anchor & Backbone",
@@ -281,12 +332,12 @@ categorized <- summary_table %>%
     )
   )
 
-categorized %>% head %>% print()
+anchor_categorized %>% head %>% print()
 ```
 
-```{r visualize_mutliFeatures_pie, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15}
+```{r TPT_OT_visualize_pie, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15}
 # just for the plots
-df_pie1 <- as.data.frame(table(categorized$Category))
+df_pie1 <- as.data.frame(table(anchor_categorized$Category))
 colnames(df_pie1) <- c("Category", "count")
 # Calculate percentages and label positions
 df_pie1 <- df_pie1 %>%
@@ -305,12 +356,12 @@ p1 <- ggplot(df_pie1, aes(x = "", y = count, fill = Category)) +
     color = "black"
   ) +
   scale_fill_manual(values = biocopy_colors) +
-  labs(title = paste0("Total peptides: ", nrow(categorized)), fill = "Category") +
+  labs(title = paste0("Total peptides: ", nrow(anchor_categorized)), fill = "Category") +
   theme_void() +
   theme(plot.title = element_text(hjust = 0.5)) +
   theme(legend.position = "none")
 
-p2 <- ggplot(categorized, aes(Total_Mismatches, fill = Category)) +
+p2 <- ggplot(anchor_categorized, aes(Total_Mismatches, fill = Category)) +
   geom_bar(position = "dodge") +
   theme_light() +
   scale_fill_manual(values = biocopy_colors) +
@@ -326,22 +377,846 @@ p1 + p2
 
 ## Step 3: Estimate _Multi-Features score_
 
-```{r bayesian, include=T, echo=F, comment=NA}
-
-# Bayesian_LR_sensitivity.R: to access LR thresholds
-# Bayesian_workflow.R: the main orchestrator -> will be tranformed to this section directly
-# utils_exp.R: will test if it is needed at all
-# Bayesian_peptide_assessment.R:
-# Bayesian_preprocess_experimental_data.R:
+```{r multi_config, include=F, echo=F, comment=NA, warning=FALSE}
 
 source("../MAGEA3_analysis/Multi_features_ranking_Utils.R")
-source("../MAGEA3_analysis/Bayesian_peptide_assessment.R")
-source("../MAGEA3_analysis/Bayesian_preprocess_experimental_data.R")
+# library(Peptides)
+# library(tidyverse)
+# #library(corrplot)
+# library(ggrepel)
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+# Top N
+N_DISAGREEMENTS <- 20
+N_VALIDATION <- 30
+
+# Define backbone positions (TCR-facing)
+BACKBONE_POSITIONS <- 3:8  # P3-P8 for 9-mers -> this needs to be re-evaluated based on tpt assay
+anchor_positions <- sort(anchor_results$Position[anchor_results$Category == "Classical Anchor"])
+all_positions <- min(anchor_positions):max(anchor_positions)
+BACKBONE_POSITIONS <- setdiff(all_positions, anchor_positions)
 
 
+# Feature weights (biology-informed)
+# Backbone features get higher weight as they face TCR
+WEIGHTS <- c(
+  gravy = 1.0,
+  pI = 1.0,
+  charge = 1.0,
+  aromaticity = 1.0,
+  aliphatic_index = 1.0,
+  backbone_gravy = 2.0,      # 2x weight
+  backbone_charge = 2.0,      # 2x weight
+  backbone_aromaticity = 2.0  # 2x weight
+)
+
+# Normalize weights to sum to 1
+WEIGHTS <- WEIGHTS / sum(WEIGHTS)
 
 ```
 
+```{r}
+print(anchor_positions)
+print(BACKBONE_POSITIONS)
+```
+
+```{r multi_data, include=F, echo=F, comment=NA}
+bayesian = bayesian_results %>%
+  dplyr::select(peptide_id, confidence_level, evidence_chain) %>%
+  dplyr::rename(id = peptide_id)
+
+positions_categories = anchor_categorized %>%
+  mutate(anchor_status = case_when(
+    Category == "Anchor Only" ~ "anchor_mismatch",
+    Category == "Perfect Match" ~ "Intact",
+    Category == "Backbone Only" ~ "Intact",
+    TRUE ~ Category),
+    id = paste0(uniprot, "_", peptide)) %>%
+  dplyr::select(id, anchor_status)
+
+epitox = epitox %>%
+  dplyr::rename(GeneName = Gene.Names) %>%
+  dplyr::select(uniprot, GeneName, peptide, Wildtype, blosum_similarity, mismatch,
+         affinity, presentation_score, Ranking_score, Rank) %>%
+  mutate(id = paste0(uniprot, "_", peptide),
+         #known_peptide = ifelse(peptide %in% known_ot$peptide, "Known", "unkwon"),
+         Rank = ifelse(Rank == "Random", "Low", Rank)) %>%
+  distinct(id, .keep_all = T) %>%
+  dplyr::rename(Bi_features_score = Ranking_score,
+                Bi_feature_rank = Rank) %>%
+  merge(., positions_categories, by ="id") %>%
+  merge(., bayesian, by ="id") %>%
+  relocate(anchor_status, .after = "mismatch")
+
+```
+
+```{r multi_features, include=F, echo=F, comment=NA}
+#============================================================================
+# COMPUTE MULTI-BIOPHYSICAL FEATURES
+# ============================================================================
+
+# Target peptide features
+target_features <- compute_biophysical_features(params$target)
+
+# All peptides - compute features
+# Use group_by(id) with group_modify to handle duplicates properly
+peptide_data <- epitox %>%
+  group_by(id) %>%
+  group_modify(~ {
+    features <- compute_biophysical_features(.x$peptide[1])
+    bind_cols(.x, features)
+  }) %>%
+  ungroup()
+
+# Multi-biophysical feature columns
+multibiophys_cols <- c("gravy", "pI", "charge", "aromaticity", "aliphatic_index",
+                       "backbone_gravy", "backbone_charge", "backbone_aromaticity")
+
+# Calculate scaling parameters from all peptides
+scaling_params <- peptide_data %>%
+  dplyr::select(all_of(multibiophys_cols)) %>%
+  summarise(across(everything(),
+                   list(mean = ~mean(., na.rm = TRUE),
+                        sd = ~sd(., na.rm = TRUE))))
+
+# Scale peptide features using computed parameters
+peptide_data <- peptide_data %>%
+  mutate(
+    gravy_scaled = apply_scaling(gravy,
+                                 scaling_params$gravy_mean,
+                                 scaling_params$gravy_sd),
+    pI_scaled = apply_scaling(pI,
+                              scaling_params$pI_mean,
+                              scaling_params$pI_sd),
+    charge_scaled = apply_scaling(charge,
+                                  scaling_params$charge_mean,
+                                  scaling_params$charge_sd),
+    aromaticity_scaled = apply_scaling(aromaticity,
+                                       scaling_params$aromaticity_mean,
+                                       scaling_params$aromaticity_sd),
+    aliphatic_index_scaled = apply_scaling(aliphatic_index,
+                                           scaling_params$aliphatic_index_mean,
+                                           scaling_params$aliphatic_index_sd),
+    backbone_gravy_scaled = apply_scaling(backbone_gravy,
+                                          scaling_params$backbone_gravy_mean,
+                                          scaling_params$backbone_gravy_sd),
+    backbone_charge_scaled = apply_scaling(backbone_charge,
+                                           scaling_params$backbone_charge_mean,
+                                           scaling_params$backbone_charge_sd),
+    backbone_aromaticity_scaled = apply_scaling(backbone_aromaticity,
+                                                scaling_params$backbone_aromaticity_mean,
+                                                scaling_params$backbone_aromaticity_sd)
+  )
+
+# Scale target features using the SAME parameters
+target_features_scaled <- target_features %>%
+  mutate(
+    gravy_scaled = apply_scaling(gravy,
+                                 scaling_params$gravy_mean,
+                                 scaling_params$gravy_sd),
+    pI_scaled = apply_scaling(pI,
+                              scaling_params$pI_mean,
+                              scaling_params$pI_sd),
+    charge_scaled = apply_scaling(charge,
+                                  scaling_params$charge_mean,
+                                  scaling_params$charge_sd),
+    aromaticity_scaled = apply_scaling(aromaticity,
+                                       scaling_params$aromaticity_mean,
+                                       scaling_params$aromaticity_sd),
+    aliphatic_index_scaled = apply_scaling(aliphatic_index,
+                                           scaling_params$aliphatic_index_mean,
+                                           scaling_params$aliphatic_index_sd),
+    backbone_gravy_scaled = apply_scaling(backbone_gravy,
+                                          scaling_params$backbone_gravy_mean,
+                                          scaling_params$backbone_gravy_sd),
+    backbone_charge_scaled = apply_scaling(backbone_charge,
+                                           scaling_params$backbone_charge_mean,
+                                           scaling_params$backbone_charge_sd),
+    backbone_aromaticity_scaled = apply_scaling(backbone_aromaticity,
+                                                scaling_params$backbone_aromaticity_mean,
+                                                scaling_params$backbone_aromaticity_sd)
+  )
+```
+
+
+```{r multi_features_normalized_scores, include=T, echo=F, comment=NA}
+# ============================================================================
+# COMPUTE MULTI-BIOPHYSICAL DISTANCE (ANCHOR STATUS-AWARE)
+# ============================================================================
+
+peptide_data <- peptide_data %>%
+  rowwise() %>%
+  mutate(
+    # Get conditional weights for this peptide based on anchor status
+    conditional_weights = list(compute_conditional_weights(anchor_status)),
+
+    # Compute multi-biophysical distance using conditional weights
+    multibiophys_distance = {
+      feature_names <- names(unlist(conditional_weights))
+      weights_vec <- unlist(conditional_weights)
+
+      # Calculate weighted distance
+      squared_diffs <- sapply(feature_names, function(feat) {
+        feat_scaled <- paste0(feat, "_scaled")
+        diff <- cur_data()[[feat_scaled]] - target_features_scaled[[feat_scaled]]
+        return(diff^2)
+      })
+
+      sqrt(sum(weights_vec * squared_diffs))
+    }
+  ) %>%
+  ungroup()
+
+# ============================================================================
+# NORMALIZE SCORES TO COMPARABLE 0-1 SCALE
+# ============================================================================
+
+multi_features_results <- peptide_data %>%
+  mutate(
+    # Bi_features is already 0-1 (keep as is)
+    #Bi_features_score = Bi_features,
+
+    # Transform multibiophys_distance to 0-1 similarity score
+    # (inverted so higher = more similar = higher priority, matching Bi_features direction)
+    multibiophys_similarity = 1 - (
+      (multibiophys_distance - min(multibiophys_distance)) /
+        (max(multibiophys_distance) - min(multibiophys_distance))
+    ),
+
+    # Compute disagreement on 0-1 scale
+    score_disagreement = abs(Bi_features_score - multibiophys_similarity),
+
+    # Also create ranks for selection/visualization
+    rank_Bi_features = rank(-Bi_features_score, ties.method = "min"),
+    rank_multibiophys = rank(-multibiophys_similarity, ties.method = "min"),
+    rank_disagreement = abs(rank_Bi_features - rank_multibiophys)
+  )
+
+# ============================================================================
+# CATEGORIZE MULTI-BIOPHYSICAL DISTANCE (k-means, k=3)
+# ============================================================================
+
+# Use of the bounded similarity score
+set.seed(42)
+kmeans_result <- kmeans(multi_features_results$multibiophys_similarity, centers = 3)
+
+multi_features_results <- multi_features_results %>%
+  mutate(
+    multibiophys_cluster = kmeans_result$cluster,
+    # Relabel so HIGH similarity = cluster 1
+    multibiophys_category = case_when(
+      multibiophys_cluster == which.max(kmeans_result$centers) ~ "High",
+      multibiophys_cluster == which.min(kmeans_result$centers) ~ "Low",
+      TRUE ~ "Moderate"
+    )
+  ) %>%
+  relocate(multibiophys_similarity, multibiophys_category, .after = "Bi_feature_rank")
+
+
+if(params$SaveResults) openxlsx::write.xlsx(multi_features_results, paste0(params$DIR, "_PreV3.xlsx"))
+```
+
+```{r multi_features_visualize, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15}
+library(ggpubr)
+
+p1 = ggplot(multi_features_results, aes(Bi_features_score, multibiophys_similarity)) +
+  geom_point() +
+  geom_smooth() +
+  stat_cor(method = "spearman") +
+  theme_light() +
+  ggtitle("Bi-features vs. Multifeatures ranking scores correlation")
+
+
+p2 = ggplot(multi_features_results) +
+  geom_histogram(aes(multibiophys_similarity), fill = biocopy_colors[1], alpha = 0.7, col = "white") +
+  geom_histogram(aes(Bi_features_score), fill = biocopy_colors[2], alpha = 0.7, col = "white") +
+  labs(x = "Ranking scores distribution", caption = "Blue = Bi features\nGreen = Multibiophys") +
+  theme_light() +
+  ggtitle("Bi-features vs. Multifeatures ranking scores distribution")
+
+p1 + p2
+
+```
+
+```{r multi_features_visualize_cor, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15}
+
+cor_matrix <- multi_features_results %>%
+  dplyr::select(all_of(multibiophys_cols), affinity, blosum_similarity) %>%
+  cor(use = "complete.obs")
+
+# # Visualize correlations
+# corrplot(cor_matrix, method = "circle", type = "upper",
+#          col = colorRampPalette(c("#99CFE9", "white", "#A2C510"))(200),
+#          title = "Multi-Biophysical Feature Correlations",
+#          mar = c(0, 0, 2, 0))
+
+p1 = ggcorrplot(cor_matrix,
+           method = "circle",
+           type = "upper",
+           colors = c("#99CFE9", "white", "#A2C510"),
+           title = "Multi-Biophysical Feature Correlations",
+           ggtheme = theme_minimal())
+
+# Visualize distance distributions by anchor status
+p2 = ggplot(multi_features_results, aes(x = anchor_status, y = multibiophys_distance, fill = anchor_status)) +
+  geom_violin(alpha = 0.7) +
+  geom_boxplot(width = 0.2, alpha = 0.9) +
+  labs(
+    title = "Multi-Biophysical Distance Distribution by Anchor Status",
+    subtitle = "Conditional weighting schemes applied based on mismatch location",
+    x = "Anchor Status",
+    y = "Multi-Biophysical Distance from Target"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_manual(values =c("Both Anchor & Backbone" = "#FBB800",
+                              "Intact" = "#99CFE9", "anchor_mismatch" = "#C61E19"))
+
+p1 + p2
+```
+
+
+```{r multi_features_visualize_anchor, echo=FALSE, warning=FALSE, message=FALSE,fig.height=7, fig.width=15}
+#head(multi_features_results)
+
+p1 = multi_features_results %>%
+  pivot_longer(cols = all_of(multibiophys_cols),
+               names_to = "feature",
+               values_to = "value") %>%
+  ggplot(aes(x = anchor_status, y = value, fill = anchor_status)) +
+  geom_boxplot() +
+  facet_wrap(~feature, scales = "free_y", ncol = 3) +
+  labs(title = "Multi-Biophysical Features by Anchor Status",
+       x = "Anchor Status", y = "Feature Value") +
+  theme_light() +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = c("Both Anchor & Backbone" = "#FBB800",
+                               "Intact" = "#99CFE9", "anchor_mismatch" = "#C61E19"))
+
+
+
+
+p1 
+```
+
+```{r decision_matrix_plot, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15}
+#library(ggpubr)
+
+p1 = ggplot(multi_features_results, aes(Bi_features_score, multibiophys_similarity)) +
+  geom_point() +
+  geom_smooth() +
+  stat_cor(method = "spearman") +
+  theme_light() +
+  ggtitle("Bi-features, Multifeatures and experimental evidence ranking scores") +
+  facet_wrap(~confidence_level, scales = "free")
+p1
+```
+
+
+# Get HighScore resutls
+
+<div style="width: 30%;">
+| VR | TPP | anabel | 
+|----|-----|-----| 
+| 4 | 104 | NA |
+| 6 | 106 | 104 |
+| 57 | 96 | 104 |
+| 58 | 98 | 104 |
+</div>
+
+```{r vr6, echo=FALSE, warning=FALSE, message=FALSE,fig.height=7, fig.width=15}
+
+score_reference = openxlsx::read.xlsx(params$SCORE_VR6) %>%
+  dplyr::rename(peptide = peptide_sequence) %>%
+  # aggregate over target
+  group_by(peptide) %>%
+  summarise(KD = mean(KD, na.rm =T),
+            across(everything(), first),  # keep first value of all columns
+            .groups = 'drop'
+  ) %>%
+  ungroup() %>% # not filtering for n because the majority are non-binders, by removing them the number of tested change
+  filter (Outcome == "Binder", peptide %in% multi_features_results$peptide, n_slides_QC_passed >1) %>% # first peptide is the QC droped one, the second is the incorrect one (TVAELVQFL)
+  select(labguru_id, peptide, KD, n, lev_dist, Outcome, log2_target_FC, n_slides_QC_passed) %>%
+  arrange(lev_dist)
+
+```
+
+```{r vr57, echo=FALSE, warning=FALSE, message=FALSE,fig.height=7, fig.width=15}
+
+score_reference_57 = openxlsx::read.xlsx(params$SCORE_VR57) %>%
+  dplyr::rename(peptide = peptide_sequence) %>%
+  # aggregate over target
+  group_by(peptide) %>%
+  summarise(KD = mean(KD, na.rm =T),
+            across(everything(), first),  # keep first value of all columns
+            .groups = 'drop'
+  ) %>%
+  ungroup() %>% # not filtering for n because the majority are non-binders, by removing them the number of tested change
+  filter (Outcome == "Binder", peptide %in% multi_features_results$peptide, n_slides_QC_passed >1) %>% # first peptide is the QC droped one, the second is the incorrect one (TVAELVQFL)
+  select(labguru_id, peptide, KD, n, lev_dist, Outcome, log2_target_FC, n_slides_QC_passed) %>%
+  arrange(lev_dist)
+
+```
+
+```{r score_annotation, echo=FALSE, warning=FALSE, message=FALSE,fig.height=5, fig.width=15, eval =F}
+
+epitox_annotation = multi_features_results %>%
+  merge(., score_reference, by = "peptide") %>%
+  relocate(uniprot, peptide) %>%
+  relocate(KD, n, lev_dist, Outcome, log2_target_FC, .after = "multibiophys_category")
+
+epitox_annotation_57 = multi_features_results %>%
+  merge(., score_reference_57, by = "peptide") %>%
+  relocate(uniprot, peptide) %>%
+  relocate(KD, n, lev_dist, Outcome, log2_target_FC, .after = "multibiophys_category")
+
+
+p1 = ggplot(epitox_annotation,
+       aes(Bi_features_score, multibiophys_similarity, col = score_disagreement)) +
+  geom_point(aes(shape = Wildtype), size = 5) +
+  facet_wrap(~confidence_level) +
+  theme_light() +
+  ggtitle(paste0("Binder OT according to SCORE - VR6 (n = ", nrow(epitox_annotation), ")")) +
+  labs(subtitle = "n_slides_QC_passed >1; Outcome = Binder", 
+       x = "Bi-feaature scores", y = "Multi-features score",
+       caption = "Plot is faceted by experimental evidence\n[0,1] score_disagreement: 0 = agree, 1 = disagree.") +
+  theme(legend.position = "bottom")
+
+p2 = ggplot(epitox_annotation_57,
+       aes(Bi_features_score, multibiophys_similarity, col = score_disagreement)) +
+  geom_point(aes(shape = Wildtype), size = 5) +
+  facet_wrap(~confidence_level) +
+  theme_light() +
+  ggtitle(paste0("Binder OT according to SCORE - VR57 (n = ", nrow(epitox_annotation_57), ")")) +
+  labs(subtitle = "n_slides_QC_passed >1; Outcome = Binder", 
+       x = "Bi-feaature scores", y = "Multi-features score",
+       caption = "Plot is faceted by experimental evidence\n[0,1] score_disagreement: 0 = agree, 1 = disagree.") +
+  theme(legend.position = "bottom")
+
+
+p1 + p2
+```
+```{r score_prep, echo=FALSE, warning=FALSE, message=FALSE}
+# Define all antibodies here — add more entries to scale up
+antibody_configs <- list(
+  VR6  = list(score_file = params$SCORE_VR6,  label = "VR6"),
+  VR57 = list(score_file = params$SCORE_VR57, label = "VR57")#,
+  #VR58 = list(score_file = params$SCORE_VR58, label = "VR58")
+)
+
+# Load and filter score data for each antibody
+score_data <- lapply(antibody_configs, function(cfg) {
+  openxlsx::read.xlsx(cfg$score_file) %>%
+    dplyr::rename(peptide = peptide_sequence) %>%
+    group_by(peptide) %>%
+    summarise(KD = mean(KD, na.rm = T),
+              across(everything(), first),
+              .groups = 'drop') %>%
+    filter(Outcome == "Binder",
+           peptide %in% multi_features_results$peptide,
+           n_slides_QC_passed > 1) %>%
+    select(labguru_id, peptide, KD, n, lev_dist, Outcome, log2_target_FC, n_slides_QC_passed) %>%
+    arrange(lev_dist) %>%
+    mutate(antibody = cfg$label)
+})
+```
+
+
+```{r annotation_prep, echo=FALSE, warning=FALSE, message=FALSE, eval=T}
+df_epitox_full <- openxlsx::read.xlsx(params$epitox) %>%
+  mutate(id = paste0(uniprot, "_", peptide))
+
+COLS <- colnames(df_epitox_full)[c(1:3, 7, 28:ncol(df_epitox_full))]
+
+# Build annotated gxp dataframe for each antibody
+gxp_data <- lapply(score_data, function(score_df) {
+  annotation <- multi_features_results %>%
+    merge(., score_df, by = "peptide") %>%
+    relocate(uniprot, peptide) %>%
+    relocate(KD, n, lev_dist, Outcome, log2_target_FC, .after = "multibiophys_category")
+
+  df_filtered <- df_epitox_full %>%
+    filter(id %in% annotation$id)
+
+  gxp <- annotation %>%
+    select(id, Wildtype, mismatch, blosum_similarity, anchor_status, GeneName,
+           confidence_level, Bi_feature_rank, multibiophys_category, Outcome, log2_target_FC) %>%
+    dplyr::rename(Multi_feature_rank = multibiophys_category,
+                  Experimental_Evidence = confidence_level) %>%
+    merge(., df_filtered[, COLS], by = "id", all.x = T) %>%
+    mutate(Experimental_Evidence = ifelse(Experimental_Evidence == "Medium", "Moderate", Experimental_Evidence),
+           genes = sub("\\s.*", "", GeneName)) %>%
+    arrange(anchor_status, Wildtype, Bi_feature_rank, Multi_feature_rank, Experimental_Evidence, log2_target_FC) %>%
+    distinct(id, .keep_all = T)
+
+  # Separate target row
+  target_row <- gxp %>%
+    mutate(peptide = gsub(".+\\_", "", id)) %>%
+    filter(peptide == params$target) %>%
+    mutate(peptide = NULL)
+
+  gxp <- gxp %>%
+    mutate(peptide = gsub(".+\\_", "", id)) %>%
+    filter(peptide != params$target) %>%
+    mutate(peptide = NULL)
+
+  list(gxp = gxp, target = target_row, annotation = annotation)
+})
+
+# Shared tissue categories (structure is identical across antibodies)
+tissues_prot <- data.frame(tissue = colnames(gxp_data[[1]]$gxp[16:(ncol(gxp_data[[1]]$gxp)-1)])) %>%
+  mutate(category = case_when(
+    tissue %in% c("adipose.tissue", "skin") ~ "Connective / Integumentary",
+    tissue %in% c("adrenal.gland", "thyroid.gland", "parathyroid.gland", "pancreas") ~ "Endocrine",
+    tissue %in% c("heart.muscle", "skeletal.muscle", "smooth.muscle") ~ "Muscular",
+    tissue %in% c("cerebral.cortex", "choroid.plexus") ~ "Nervous",
+    tissue %in% c("lung") ~ "Respiratory",
+    tissue %in% c("liver", "gallbladder") ~ "Hepatic / Biliary",
+    tissue %in% c("kidney", "urinary.bladder") ~ "Urinary",
+    tissue %in% c("spleen", "thymus", "lymph.node", "tonsil", "appendix", "bone.marrow") ~ "Immune",
+    tissue %in% c("colon", "duodenum", "esophagus", "rectum", "salivary.gland", "small.intestine", "stomach", "tongue") ~ "Digestive",
+    tissue %in% c("breast", "cervix", "endometrium", "epididymis", "fallopian.tube", "ovary", "placenta", "prostate", "seminal.vesicle", "testis") ~ "Reproductive",
+    TRUE ~ "Other"
+  ))
+```
+
+```{r score_annotation_plot, echo=FALSE, warning=FALSE, message=FALSE, fig.height=5, fig.width=15}
+
+annotation_plots <- lapply(names(score_data), function(ab_name) {
+  annotation <- multi_features_results %>%
+    merge(., score_data[[ab_name]], by = "peptide") %>%
+    relocate(uniprot, peptide) %>%
+    relocate(KD, n, lev_dist, Outcome, log2_target_FC, .after = "multibiophys_category")
+
+  ggplot(annotation, aes(Bi_features_score, multibiophys_similarity, col = score_disagreement)) +
+    geom_point(aes(shape = Wildtype), size = 5) +
+    facet_wrap(~confidence_level) +
+    theme_light() +
+    ggtitle(paste0("Binder OT according to SCORE - ", ab_name, " (n = ", nrow(annotation), ")")) +
+    labs(subtitle = "n_slides_QC_passed >1; Outcome = Binder",
+         x = "Bi-feature scores", y = "Multi-features score",
+         caption = "Plot is faceted by experimental evidence\n[0,1] score_disagreement: 0 = agree, 1 = disagree.") +
+    theme(legend.position = "bottom")
+})
+
+wrap_plots(annotation_plots)
+```
+
+```{r HM, echo=FALSE, warning=FALSE, message=FALSE, fig.height=11, fig.width=15, eval=T}
+build_heatmap <- function(ab_name, show_rows = TRUE, show_legend = TRUE) {
+  gxp       <- gxp_data[[ab_name]]$gxp
+  target_row <- gxp_data[[ab_name]]$target
+  expr_mat  <- gxp[, 16:(ncol(gxp)-1)]
+  df_fc     <- sweep(log2(expr_mat + 1), 2,
+                     log2(as.numeric(target_row[, 16:(ncol(target_row)-1)]) + 1), "-")
+  mat       <- as.matrix(df_fc)
+  rownames(mat) <- make.unique(paste0(gxp$genes, "_", gsub(".+\\_", "", gxp$id), "_", ab_name))
+  col_fun <- colorRamp2(
+    c(min(mat, na.rm=T), 0, 1, 2, 4, 6, max(mat, na.rm=T)),
+    c("#64686A", "#F6F9E7", "#D6E6D6", "#ADCDAD", "#85B484", "#5C9B5B", "#338232")
+  )
+  Heatmap(t(mat),
+          name = ab_name,
+          col = col_fun,
+          column_title = ab_name,
+          rect_gp = gpar(col = "black", lwd = 0.2),
+          row_gap = unit(2, "mm"), border = TRUE,
+          row_split = tissues_prot$category,
+          show_row_names = show_rows,
+          row_names_side = "right",
+          row_title_rot = 0,
+          show_heatmap_legend = show_legend,
+          row_title_gp = gpar(fontsize = 9),
+          row_names_gp = gpar(fontsize = 10),
+          column_split = gxp$Wildtype,
+          cluster_rows = F, cluster_columns = F,
+          column_names_gp = gpar(fontsize = 9),
+          show_column_dend = F, show_row_dend = F,
+          column_names_rot = 45,
+          na_col = "gray",
+          top_annotation = top_annotation(gxp = gxp, to_heatmap = mat),
+          bottom_annotation = bottom_annotation(gxp = gxp, to_heatmap = mat),
+          heatmap_legend_param = list(
+            direction = "horizontal",
+            legend_width = unit(8, "cm"),
+            title = paste0("log2 FC - ", ab_name)
+          )
+  )
+}
+
+# For side-by-side display: row names and legend only on last
+heatmap_list_display <- lapply(seq_along(names(gxp_data)), function(i) {
+  ab_name <- names(gxp_data)[i]
+  is_last <- i == length(gxp_data)
+  build_heatmap(ab_name, show_rows = is_last, show_legend = is_last)
+})
+
+combined_hm <- Reduce("+", heatmap_list_display)
+draw(combined_hm,
+     column_title = "Confirmed binders by highSCORE",
+     merge_legend = TRUE,
+     heatmap_legend_side = "bottom",
+     annotation_legend_side = "bottom")
+
+if (params$SaveResults) {
+  pdf(paste0(params$DIR, "_Binders_GXP_nTPM_tissueSplit_all.pdf"), width = 12, height = 11)
+  lapply(names(gxp_data), function(ab_name) {
+    hm <- build_heatmap(ab_name, show_rows = TRUE, show_legend = TRUE)
+    draw(hm,
+         column_title = paste0("Confirmed binders - ", ab_name),
+         merge_legend = TRUE,
+         heatmap_legend_side = "bottom",
+         annotation_legend_side = "bottom")
+  })
+  dev.off()
+  invisible(dev.off())
+}
+```
+
+```{r binders_table, echo=FALSE, warning=FALSE, message=FALSE}
+library(DT)
+
+# Combine all antibody results into one table
+binders_combined <- lapply(names(gxp_data), function(ab_name) {
+  gxp_data[[ab_name]]$annotation %>%
+    mutate(antibody = ab_name)
+}) %>%
+  bind_rows() %>%
+  select(antibody, uniprot, peptide, Wildtype, mismatch, anchor_status,
+         blosum_similarity, affinity, Bi_features_score, multibiophys_similarity,
+         confidence_level, KD, log2_target_FC, Outcome) %>%
+  arrange(antibody, mismatch)
+
+datatable(binders_combined,
+          filter = "top",
+          rownames = FALSE,
+          options = list(pageLength = 5,
+                         scrollX = TRUE),
+          caption = "Confirmed binders per antibody — filterable by any column")
+```
+
+```{r gxp_prep_vr6, echo=FALSE, warning=FALSE, message=FALSE,fig.height=7, fig.width=15, eval=F}
+df = openxlsx::read.xlsx(params$epitox) %>%
+  mutate(id = paste0(uniprot, "_", peptide)) %>%
+  filter(id %in% epitox_annotation$id) %>%
+  relocate(id)
+
+COLS = colnames(df)[c(1:3,7,28:ncol(df))]
+epitox_gxp = epitox_annotation%>%
+  select(id, Wildtype, mismatch, blosum_similarity, anchor_status,
+         confidence_level, Bi_feature_rank, multibiophys_category, Outcome, log2_target_FC) %>%
+  dplyr::rename(Multi_feature_rank = multibiophys_category,
+                Experimental_Evidence = confidence_level) %>%
+  merge(., df[,COLS], by = "id", all.x =T) %>%
+  mutate(Experimental_Evidence = ifelse(Experimental_Evidence == "Medium", "Moderate", Experimental_Evidence),
+         genes = sub("\\s.*", "", Gene.Names)) %>%
+  arrange(anchor_status, Wildtype, Bi_feature_rank,
+          Multi_feature_rank, Experimental_Evidence, log2_target_FC) %>%
+  distinct(id, .keep_all = T) # this was added after the final version since MAGEA2 had two arrows in the gxp -> the binders are 36 not 37
+
+tissues_prot = data.frame(tissue = colnames(epitox_gxp[16:(ncol(epitox_gxp)-1)])) %>%
+  mutate(category = case_when(
+    tissue %in% c("adipose.tissue", "skin") ~ "Connective / Integumentary",
+    tissue %in% c("adrenal.gland", "thyroid.gland", "parathyroid.gland", "pancreas") ~ "Endocrine",
+    tissue %in% c("heart.muscle", "skeletal.muscle", "smooth.muscle") ~ "Muscular",
+    tissue %in% c("cerebral.cortex", "choroid.plexus") ~ "Nervous",
+    tissue %in% c("lung") ~ "Respiratory",
+    tissue %in% c("liver", "gallbladder") ~ "Hepatic / Biliary",
+    tissue %in% c("kidney", "urinary.bladder") ~ "Urinary",
+    tissue %in% c("spleen", "thymus", "lymph.node", "tonsil","appendix", "bone.marrow") ~ "Immune", #"Immune / Lymphatic",
+    tissue %in% c("colon", "duodenum", "esophagus", "rectum", "salivary.gland", "small.intestine", "stomach", "tongue") ~ "Digestive",
+    tissue %in% c("breast", "cervix", "endometrium", "epididymis", "fallopian.tube", "ovary", "placenta", "prostate", "seminal.vesicle", "testis") ~ "Reproductive",
+    #tissue %in% c("appendix", "bone.marrow") ~ "Immune / Hematopoietic",
+    TRUE ~ "Other"
+  ))
+
+target = epitox_gxp %>%
+  mutate(peptide = gsub(".+\\_", "", id)) %>%
+  filter (peptide == params$target) %>%
+  mutate(peptide = NULL)
+
+
+epitox_gxp = epitox_gxp %>%
+  mutate(peptide = gsub(".+\\_", "", id)) %>%
+  filter(peptide != params$target) %>%
+  mutate(peptide = NULL)
+```
+
+```{r gxp_prep_vr57, echo=FALSE, warning=FALSE, message=FALSE,fig.height=7, fig.width=15, eval=F}
+df = openxlsx::read.xlsx(params$epitox) %>%
+  mutate(id = paste0(uniprot, "_", peptide)) %>%
+  filter(id %in% epitox_annotation_57$id) %>%
+  relocate(id)
+
+COLS = colnames(df)[c(1:3,7,28:ncol(df))]
+epitox_gxp_57 = epitox_annotation_57 %>%
+  select(id, Wildtype, mismatch, blosum_similarity, anchor_status,
+         confidence_level, Bi_feature_rank, multibiophys_category, Outcome, log2_target_FC) %>%
+  dplyr::rename(Multi_feature_rank = multibiophys_category,
+                Experimental_Evidence = confidence_level) %>%
+  merge(., df[,COLS], by = "id", all.x =T) %>%
+  mutate(Experimental_Evidence = ifelse(Experimental_Evidence == "Medium", "Moderate", Experimental_Evidence),
+         genes = sub("\\s.*", "", Gene.Names)) %>%
+  arrange(anchor_status, Wildtype, Bi_feature_rank,
+          Multi_feature_rank, Experimental_Evidence, log2_target_FC) %>%
+  distinct(id, .keep_all = T) 
+
+tissues_prot_57 = data.frame(tissue = colnames(epitox_gxp_57[16:(ncol(epitox_gxp_57)-1)])) %>%
+  mutate(category = case_when(
+    tissue %in% c("adipose.tissue", "skin") ~ "Connective / Integumentary",
+    tissue %in% c("adrenal.gland", "thyroid.gland", "parathyroid.gland", "pancreas") ~ "Endocrine",
+    tissue %in% c("heart.muscle", "skeletal.muscle", "smooth.muscle") ~ "Muscular",
+    tissue %in% c("cerebral.cortex", "choroid.plexus") ~ "Nervous",
+    tissue %in% c("lung") ~ "Respiratory",
+    tissue %in% c("liver", "gallbladder") ~ "Hepatic / Biliary",
+    tissue %in% c("kidney", "urinary.bladder") ~ "Urinary",
+    tissue %in% c("spleen", "thymus", "lymph.node", "tonsil","appendix", "bone.marrow") ~ "Immune", #"Immune / Lymphatic",
+    tissue %in% c("colon", "duodenum", "esophagus", "rectum", "salivary.gland", "small.intestine", "stomach", "tongue") ~ "Digestive",
+    tissue %in% c("breast", "cervix", "endometrium", "epididymis", "fallopian.tube", "ovary", "placenta", "prostate", "seminal.vesicle", "testis") ~ "Reproductive",
+    #tissue %in% c("appendix", "bone.marrow") ~ "Immune / Hematopoietic",
+    TRUE ~ "Other"
+  ))
+
+target_57 = epitox_gxp_57 %>%
+  mutate(peptide = gsub(".+\\_", "", id)) %>%
+  filter (peptide == params$target) %>%
+  mutate(peptide = NULL)
+
+
+epitox_gxp_57 = epitox_gxp_57 %>%
+  mutate(peptide = gsub(".+\\_", "", id)) %>%
+  filter(peptide != params$target) %>%
+  mutate(peptide = NULL)
+```
+
+```{r hm_vr6, echo=FALSE, warning=FALSE, message=FALSE,fig.height=11, fig.width=15, eval=F}
+expr_mat = epitox_gxp[, 16:(ncol(epitox_gxp)-1)]
+
+df <- sweep(log2(expr_mat+1), 2, log2(as.numeric(target[, 16:(ncol(target)-1)])+1), "-") # took the isoform with highest gxp
+mat = as.matrix(df)
+
+#cat("min:", min(mat, na.rm = TRUE), "\n")
+#cat("max:", max(mat, na.rm = TRUE), "\n")
+#cat("class:", class(mat), "\n")
+#cat("all NA?", all(is.na(mat)), "\n")
+
+rownames(mat) = paste0(epitox_gxp$genes, "_", gsub(".+\\_", "", epitox_gxp$id))
+peptides = gsub(".+\\_", "", epitox_gxp$id)
+# Define your custom breakpoints for better granularity above zero
+col_prot_fun = colorRamp2(
+  c(min(mat, na.rm = TRUE), 0, 1, 2, 4, 6, max(mat, na.rm = TRUE)),
+  c("#64686A", "#F6F9E7", "#D6E6D6", "#ADCDAD", "#85B484", "#5C9B5B", "#338232")
+)
+prot_top_ha = top_annotation(gxp = epitox_gxp, to_heatmap = mat)
+prot_bottom_ha = bottom_annotation(gxp = epitox_gxp, to_heatmap = mat)
+
+hpa_ch_plot = mat %>%
+  t() %>%
+  Heatmap(name = "Gene expression (nTPM)",
+          col = col_prot_fun,
+          rect_gp = gpar(col = "black", lwd = 0.2),
+          row_gap = unit(2, "mm"), border = TRUE,
+          row_split = tissues_prot$category,
+          row_title_rot = 0,
+          row_title_gp = gpar(fontsize = 9),
+          row_names_gp = gpar(fontsize = 10),
+          column_split = epitox_gxp$Wildtype,
+          
+          cluster_rows = F,
+          cluster_columns = F,
+          column_names_gp = gpar(fontsize = 9),
+          show_column_dend = F,
+          show_row_dend = F,
+          column_names_rot = 45,
+          
+          na_col = "gray",
+          top_annotation = prot_top_ha,
+          bottom_annotation = prot_bottom_ha,
+          heatmap_legend_param = list(
+            direction = "horizontal",
+            legend_width = unit(15, "cm"),
+            at = c(min(mat, na.rm = TRUE), 0, 1, 2, 4, 6, 8, max(mat, na.rm = TRUE)),
+            labels = c(round(min(mat, na.rm = TRUE)), "0", "1", "2", "4", "6", "8",
+                       round(max(mat, na.rm = TRUE))),
+            title = "log2 FC"
+          ),
+  )
+
+# generate heatmap
+draw(hpa_ch_plot, column_title = "Confirmed binders according to highSCORE - VR6",
+           merge_legend = TRUE, heatmap_legend_side = "bottom",
+           annotation_legend_side = "bottom")
+
+if(params$SaveResults){
+  pdf(paste0(params$DIR,"/Binders_GXP_nTPM_tissueSplit_VR6.pdf"), width = 14, height = 12)
+  draw(hpa_ch_plot, column_title = "Confirmed binders according to highSCORE",
+     merge_legend = TRUE, heatmap_legend_side = "bottom",
+     annotation_legend_side = "bottom")
+dev.off()}
+```
+```{r hm_vr57, echo=FALSE, warning=FALSE, message=FALSE,fig.height=11, fig.width=15, eval=F}
+expr_mat_57 = epitox_gxp_57[, 16:(ncol(epitox_gxp_57)-1)]
+
+df <- sweep(log2(expr_mat_57+1), 2, log2(as.numeric(target_57[, 16:(ncol(target_57)-1)])+1), "-") 
+mat_57 = as.matrix(df)
+
+rownames(mat_57) = paste0(epitox_gxp_57$genes, "_", gsub(".+\\_", "", epitox_gxp_57$id))
+peptides_57 = gsub(".+\\_", "", epitox_gxp_57$id)
+# Define your custom breakpoints for better granularity above zero
+col_prot_fun = colorRamp2(
+  c(min(mat_57, na.rm = TRUE), 0, 1, 2, 4, 6, max(mat_57, na.rm = TRUE)),
+  c("#64686A", "#F6F9E7", "#D6E6D6", "#ADCDAD", "#85B484", "#5C9B5B", "#338232")
+)
+prot_top_ha_57 = top_annotation(gxp = epitox_gxp_57, to_heatmap = mat_57)
+prot_bottom_ha_57 = bottom_annotation(gxp = epitox_gxp_57, to_heatmap = mat_57)
+
+hpa_ch_plot_57 = mat_57 %>%
+  t() %>%
+  Heatmap(name = "Gene expression (nTPM)",
+          col = col_prot_fun,
+          rect_gp = gpar(col = "black", lwd = 0.2),
+          row_gap = unit(2, "mm"), border = TRUE,
+          row_split = tissues_prot_57$category,
+          row_title_rot = 0,
+          row_title_gp = gpar(fontsize = 9),
+          row_names_gp = gpar(fontsize = 10),
+          column_split = epitox_gxp_57$Wildtype,
+          
+          cluster_rows = F,
+          cluster_columns = F,
+          column_names_gp = gpar(fontsize = 9),
+          show_column_dend = F,
+          show_row_dend = F,
+          column_names_rot = 45,
+          
+          na_col = "gray",
+          top_annotation = prot_top_ha_57,
+          bottom_annotation = prot_bottom_ha_57,
+          heatmap_legend_param = list(
+            direction = "horizontal",
+            legend_width = unit(15, "cm"),
+            at = c(min(mat_57, na.rm = TRUE), 0, 1, 2, 4, 6, 8, max(mat_57, na.rm = TRUE)),
+            labels = c(round(min(mat_57, na.rm = TRUE)), "0", "1", "2", "4", "6", "8",
+                       round(max(mat_57, na.rm = TRUE))),
+            title = "log2 FC"
+          ),
+  )
+
+# generate heatmap
+draw(hpa_ch_plot_57, column_title = "Confirmed binders according to highSCORE - VR57",
+           merge_legend = TRUE, heatmap_legend_side = "bottom",
+           annotation_legend_side = "bottom")
+
+if(params$SaveResults){
+  pdf(paste0(params$DIR,"_Binders_GXP_nTPM_tissueSplit_VR57.pdf"), width = 14, height = 12)
+  draw(hpa_ch_plot, column_title = "Confirmed binders according to highSCORE",
+     merge_legend = TRUE, heatmap_legend_side = "bottom",
+     annotation_legend_side = "bottom")
+dev.off()}
+```
 # Notes
 
 ## Experimental evidence
