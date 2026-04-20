@@ -9,6 +9,7 @@ biocopy_colors = c("#A2C510", "#99CFE9", "#FBB800", "#939597", "#C61E19", "#438D
 
 # Read data
 data <- openxlsx::read.xlsx("/Users/hoor.alhasani/Documents/Projects/MAGEA3/P048 binders.xlsx")
+colnames(data) = c("VR_33", "VR_27", "VR_24", "VR_30", "VR_22", "VR_103", "VR_102")
 
 # Convert to list format (one vector per cell line)
 PEPs_lists <- lapply(data, function(x) x[!is.na(x)])
@@ -24,8 +25,8 @@ cairo_pdf("/Users/hoor.alhasani/Documents/Projects/MAGEA3/AB_OT_overlap.pdf",
 upset(fromList(PEPs_lists),
       nsets = 7,
       order.by = "freq",
-      main.bar.color = "#3373A1",
-      sets.bar.color = "#A2C510",
+      main.bar.color = "#2C4255",
+      sets.bar.color = "#64686A",
       point.size = 4,
       line.size = 2,
       text.scale = c(2.5, 2.5, 2.5, 2.5, 2.5, 2.5))
